@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keeper Channel Marketing Dashboard</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--bg1:#111;--bg2:#161616;--bg3:#1c1c1c;--border:#222;--border2:#2a2a2a;--gold:#ffc700;--gold-dim:rgba(255,199,0,.12);--gold-text:#ffc700;--white:#fff;--gray:#ccc;--gray2:#fff;--gray3:#ccc;--blue:#378ADD;--blue-dim:rgba(55,138,221,.15);--purple:#7F77DD;--purple-dim:rgba(127,119,221,.15);--teal:#1D9E75;--teal-dim:rgba(29,158,117,.15);--orange:#E8820A;--orange-dim:rgba(232,130,10,.15);--danger:#E24B4A;--danger-dim:rgba(226,75,74,.15);--r:8px;--rsm:4px;--rlg:12px;--s0:0 1px 3px rgba(0,0,0,.07);--s1:0 4px 16px rgba(0,0,0,.1);--slg:0 12px 32px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--white);min-height:100vh;font-size:14px;line-height:1.5}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#000}
+.auth-card{background:var(--bg1);border-radius:16px;padding:48px;max-width:420px;width:100%;text-align:center;border:1px solid var(--border2);box-shadow:var(--slg)}
+.auth-icon{width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;overflow:hidden}
+.auth-card h1{font-size:22px;font-weight:700;letter-spacing:-.3px;margin-bottom:8px;color:var(--white)}
+.auth-card p{color:var(--gray);font-size:14px;margin-bottom:32px;line-height:1.6}
+.sign-in-btn{display:inline-flex;align-items:center;gap:10px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--white)}
+.sign-in-btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.sign-in-btn img{width:18px;height:18px}
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,199,0,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+.loading-txt{color:var(--gray);font-size:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#app{display:none;flex-direction:column;min-height:100vh}
+header{background:#000;color:var(--white);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border)}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.hdr-logo{width:30px;height:30px;border-radius:6px;overflow:hidden}
+header h1{font-size:14px;font-weight:600}
+.hdr-meta{font-size:11px;color:var(--gray3);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.refresh-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:var(--rsm);color:var(--gray);font-size:12px;padding:6px 10px;cursor:pointer;font-family:inherit;transition:all .15s}
+.refresh-btn:hover{border-color:var(--gold);color:var(--gold)}
+.refresh-btn.spinning svg{animation:spin .8s linear infinite}
+.signout-btn{background:none;border:none;color:var(--gray3);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:var(--rsm);font-family:inherit;transition:color .15s}
+.signout-btn:hover{color:var(--white)}
+.tab-nav{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 32px;display:flex}
+.tab-btn{height:44px;padding:0 18px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--gray);cursor:pointer;font-family:inherit;transition:all .15s;margin-bottom:-1px}
+.tab-btn:hover{color:var(--white)}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.filter-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 32px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3);margin-right:2px;flex-shrink:0}
+.fdivider{width:1px;height:20px;background:var(--border2);margin:0 2px}
+.filter-search{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--rsm);font-size:13px;font-family:inherit;color:var(--white);background:var(--bg2);outline:none;transition:border-color .15s;width:180px}
+.filter-search:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,199,0,.1)}
+.filter-search::placeholder{color:var(--gray3)}
+.clear-btn{height:32px;padding:0 12px;background:none;border:1px solid var(--border2);border-radius:var(--rsm);font-size:12px;color:var(--gray);cursor:pointer;font-family:inherit;transition:all .15s}
+.clear-btn:hover{border-color:var(--gold);color:var(--gold)}
+.active-badge{font-size:11px;color:var(--gold);font-weight:600;background:var(--gold-dim);padding:2px 8px;border-radius:10px;display:none}
+.ms-wrap{position:relative}
+.ms-btn{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--rsm);font-size:13px;font-family:inherit;color:var(--gray);background:var(--bg2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;outline:none;transition:border-color .15s;white-space:nowrap;max-width:170px}
+.ms-btn .ms-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left}
+.ms-btn .ms-arr{flex-shrink:0;font-size:9px;color:var(--gray3);transition:transform .15s}
+.ms-btn.open{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,199,0,.1)}
+.ms-btn.open .ms-arr{transform:rotate(180deg)}
+.ms-btn.has-sel{border-color:var(--gold);background:var(--gold-dim)}
+.ms-btn.has-sel .ms-lbl{color:var(--gold);font-weight:600}
+.ms-cnt{background:var(--gold);color:#000;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:700;flex-shrink:0}
+.ms-dd{display:none;position:absolute;top:36px;left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);box-shadow:var(--s1);z-index:200;min-width:200px;max-width:280px}
+.ms-dd.open{display:block}
+.ms-sw{padding:8px 8px 4px}
+.ms-si{width:100%;height:28px;padding:0 8px;border:1px solid var(--border2);border-radius:var(--rsm);font-size:12px;font-family:inherit;outline:none;background:var(--bg3);color:var(--white)}
+.ms-si:focus{border-color:var(--gold)}
+.ms-si::placeholder{color:var(--gray3)}
+.ms-list{max-height:220px;overflow-y:auto;padding:4px}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rsm);cursor:pointer;font-size:13px;user-select:none;color:var(--white)}
+.ms-opt:hover{background:var(--bg3)}
+.ms-opt.sel{background:var(--gold-dim);color:var(--gold)}
+.ms-opt.sel .ms-chk{background:var(--gold);border-color:var(--gold)}
+.ms-opt.sel .ms-chk::after{display:block}
+.ms-chk{width:15px;height:15px;border:1.5px solid var(--border2);border-radius:3px;flex-shrink:0;position:relative}
+.ms-chk::after{content:'';display:none;position:absolute;top:1px;left:4px;width:5px;height:8px;border:2px solid #000;border-top:none;border-left:none;transform:rotate(45deg)}
+.ms-opt-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.ms-foot{display:flex;justify-content:space-between;padding:6px 8px 8px;border-top:1px solid var(--border);margin-top:4px}
+.ms-fbt{font-size:11px;color:var(--gold);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 4px}
+.ms-fbt:hover{text-decoration:underline}
+.ms-empty{padding:12px 8px;text-align:center;font-size:12px;color:var(--gray)}
+main{padding:24px 32px;flex:1;max-width:1440px;width:100%;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric{background:var(--bg1);border-radius:var(--rlg);padding:16px 18px;border:1px solid var(--border);position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.metric.c-gold::before{background:var(--gold)}
+.metric.c-blue::before{background:var(--blue)}
+.metric.c-purple::before{background:var(--purple)}
+.metric.c-teal::before{background:var(--teal)}
+.metric.c-orange::before{background:var(--orange)}
+.metric-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3);margin-bottom:8px}
+.metric-val{font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1;margin-bottom:5px}
+.metric.c-gold .metric-val{color:var(--gold)}
+.metric.c-blue .metric-val{color:var(--blue)}
+.metric.c-purple .metric-val{color:var(--purple)}
+.metric.c-teal .metric-val{color:var(--teal)}
+.metric.c-orange .metric-val{color:var(--orange)}
+.metric-sub{font-size:12px;color:var(--gray)}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{background:var(--bg1);border-radius:var(--rlg);padding:18px 20px;border:1px solid var(--border)}
+.chart-hdr{margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:600;color:var(--white)}
+.chart-sub{font-size:11px;color:var(--gray);margin-top:1px}
+canvas{max-height:220px}
+.status-grid{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.status-row{display:flex;align-items:center;gap:10px}
+.status-label{font-size:12px;color:var(--white);width:140px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.status-bar{height:8px;border-radius:4px}
+.status-count{font-size:11px;color:var(--gray);width:50px;text-align:right;flex-shrink:0}
+.table-card{background:var(--bg1);border-radius:var(--rlg);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:600;color:var(--white)}
+.table-cnt{font-size:11px;color:var(--gray);background:var(--bg2);padding:3px 8px;border-radius:10px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:9px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--gray3);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--white)}
+thead th.sorted{color:var(--gold)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+tbody td{padding:9px 14px;vertical-align:middle;color:var(--white)}
+.td-amt{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600}
+.b-reseller{background:var(--blue-dim);color:var(--blue)}
+.b-distributor{background:var(--purple-dim);color:var(--purple)}
+.b-msp{background:var(--teal-dim);color:var(--teal)}
+.b-classic{background:var(--orange-dim);color:var(--orange)}
+.b-def{background:var(--bg3);color:var(--gray)}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.sp-progress{background:rgba(255,199,0,.15);color:var(--gold)}
+.sp-complete{background:var(--teal-dim);color:var(--teal)}
+.sp-notstarted{background:var(--bg3);color:var(--gray)}
+.sp-awaiting{background:var(--orange-dim);color:var(--orange)}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--gray)}
+.pag-btns{display:flex;gap:3px}
+.pbt{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg2);cursor:pointer;font-size:12px;color:var(--gray);transition:all .1s;font-family:inherit}
+.pbt:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.pbt.active{background:var(--gold);color:#000;border-color:var(--gold)}
+.pbt:disabled{opacity:.3;cursor:default}
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray);font-size:13px}
+.error-bar{display:none;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--danger)}.error-bar.show{display:block}
+@media(max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}.charts-2{grid-template-columns:1fr}.charts-3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){main,header,.filter-bar,.tab-nav{padding-left:16px;padding-right:16px}.metrics{grid-template-columns:1fr 1fr}.charts-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-icon"><img src="favicon.png" style="width:52px;height:52px;border-radius:50%"></div>
+    <h1>Channel Marketing Dashboard</h1>
+    <p>Sign in with your Keeper Google Workspace account to view the channel dashboard.</p>
+    <button class="sign-in-btn" id="sign-in-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google</button>
+  </div>
+</div>
+
+<div id="loading"><div class="spinner"></div><div class="loading-txt">Loading channel data...</div></div>
+
+<div id="app">
+  <header>
+    <div class="hdr-left">
+      <div class="hdr-logo"><img src="favicon.png" style="width:30px;height:30px;border-radius:6px;display:block"></div>
+      <div><h1>Channel Marketing Dashboard</h1><div class="hdr-meta" id="last-updated">-</div></div>
+    </div>
+    <div class="hdr-right">
+      <button class="refresh-btn" id="refresh-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        Refresh
+      </button>
+      <button class="signout-btn" id="signout-btn">Sign out</button>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="partners">Partner spend</button>
+    <button class="tab-btn" data-tab="rtm">Route to market spend</button>
+  </div>
+
+  <!-- PARTNER FILTERS -->
+  <div class="filter-bar" id="partner-filters">
+    <span class="filter-label">Filter</span>
+    <div class="ms-wrap" id="pf-month"></div>
+    <div class="ms-wrap" id="pf-segment"></div>
+    <div class="ms-wrap" id="pf-partnertype"></div>
+    <div class="ms-wrap" id="pf-cam"></div>
+    <div class="ms-wrap" id="pf-type"></div>
+    <div class="ms-wrap" id="pf-status"></div>
+    <div class="fdivider"></div>
+    <input type="text" class="filter-search" id="pf-search" placeholder="Search partners...">
+    <button class="clear-btn" id="pf-clear">Clear all</button>
+    <span class="active-badge" id="pf-badge"></span>
+  </div>
+
+  <!-- RTM FILTERS -->
+  <div class="filter-bar" id="rtm-filters" style="display:none">
+    <span class="filter-label">Filter</span>
+    <div class="ms-wrap" id="rf-month"></div>
+    <div class="ms-wrap" id="rf-region"></div>
+    <div class="ms-wrap" id="rf-rtm"></div>
+    <div class="fdivider"></div>
+    <input type="text" class="filter-search" id="rf-search" placeholder="Search expenses...">
+    <button class="clear-btn" id="rf-clear">Clear all</button>
+    <span class="active-badge" id="rf-badge"></span>
+  </div>
+
+  <main>
+    <div class="error-bar" id="error-bar"></div>
+
+    <!-- PARTNER SPEND TAB -->
+    <div class="section active" id="section-partners">
+      <div class="metrics">
+        <div class="metric c-gold"><div class="metric-lbl">Total committed spend</div><div class="metric-val" id="pm-total">-</div><div class="metric-sub" id="pm-total-sub">-</div></div>
+        <div class="metric c-blue"><div class="metric-lbl">Activities</div><div class="metric-val" id="pm-count">-</div><div class="metric-sub" id="pm-count-sub">-</div></div>
+        <div class="metric c-purple"><div class="metric-lbl">Partners</div><div class="metric-val" id="pm-partners">-</div><div class="metric-sub" id="pm-partners-sub">-</div></div>
+        <div class="metric c-teal"><div class="metric-lbl">CAMs active</div><div class="metric-val" id="pm-cams">-</div><div class="metric-sub" id="pm-cams-sub">-</div></div>
+      </div>
+
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Spend by activity type</div><div class="chart-sub">Cost breakdown by type of activity</div></div>
+          <canvas id="ch-activity-type"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Spend by partner type</div><div class="chart-sub">Reseller, distributor, MSP breakdown</div></div>
+          <canvas id="ch-partner-type"></canvas>
+        </div>
+      </div>
+
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Spend by CAM</div><div class="chart-sub">Cost per channel account manager</div></div>
+          <canvas id="ch-cam"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Activity status</div><div class="chart-sub">Current status across all activities</div></div>
+          <div class="status-grid" id="status-grid"></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-hdr">
+          <div class="table-title">Activity log</div>
+          <span class="table-cnt" id="partner-tbl-cnt">-</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th data-col="month">Month</th>
+              <th data-col="segment">Segment</th>
+              <th data-col="partnerType">Partner type</th>
+              <th data-col="accountName">Account</th>
+              <th data-col="cam">CAM</th>
+              <th data-col="activityName">Activity</th>
+              <th data-col="location">Location</th>
+              <th data-col="type">Type</th>
+              <th data-col="status">Status</th>
+              <th data-col="cost" style="text-align:right">Cost</th>
+            </tr></thead>
+            <tbody id="partner-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="p-pag-info">-</span><div class="pag-btns" id="p-pag-btns"></div></div>
+      </div>
+    </div>
+
+    <!-- ROUTE TO MARKET TAB -->
+    <div class="section" id="section-rtm">
+      <div class="metrics">
+        <div class="metric c-gold"><div class="metric-lbl">Total channel spend</div><div class="metric-val" id="rm-total">-</div><div class="metric-sub" id="rm-total-sub">-</div></div>
+        <div class="metric c-blue"><div class="metric-lbl">Expenses logged</div><div class="metric-val" id="rm-count">-</div><div class="metric-sub" id="rm-count-sub">-</div></div>
+        <div class="metric c-purple"><div class="metric-lbl">Top route to market</div><div class="metric-val" id="rm-top" style="font-size:16px">-</div><div class="metric-sub" id="rm-top-sub">-</div></div>
+        <div class="metric c-teal"><div class="metric-lbl">Routes active</div><div class="metric-val" id="rm-routes">-</div><div class="metric-sub" id="rm-routes-sub">-</div></div>
+      </div>
+
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Monthly channel spend</div><div class="chart-sub">Total spend by month</div></div>
+          <canvas id="ch-rtm-monthly"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Spend by route to market</div><div class="chart-sub">Breakdown by RTM value</div></div>
+          <canvas id="ch-rtm-breakdown"></canvas>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-hdr">
+          <div class="table-title">Channel expenses</div>
+          <span class="table-cnt" id="rtm-tbl-cnt">-</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th data-col="month">Month</th>
+              <th data-col="owner">Owner</th>
+              <th data-col="vendor">Campaign / vendor</th>
+              <th data-col="rtm">Route to market</th>
+              <th data-col="budgetLine">Budget line</th>
+              <th data-col="region">Region</th>
+              <th data-col="amount" style="text-align:right">Amount</th>
+            </tr></thead>
+            <tbody id="rtm-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="r-pag-info">-</span><div class="pag-btns" id="r-pag-btns"></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const CLIENT_ID   = '396787219533-38oqi64vqis5pj6iaa7s3r15n2h35dok.apps.googleusercontent.com';
+const BUDGET_SHEET= '1FTd9ejQJ6sLhrerbtD3kM_q5aInU4ILvasGQfV3YOJo';
+const PARTNER_SHEET='1Hr4uRDrkX-94DYjjG9SUg_J1iQhXBmqWwCBd9KJOJMM';
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const PAL=['#ffc700','#378ADD','#7F77DD','#E8820A','#E24B4A','#0891b2','#1D9E75','#c026d3','#65a30d','#b45309'];
+
+let partnerData=[], rtmData=[], filteredPartners=[], filteredRTM=[];
+let charts={}, token=null, activeTab='partners';
+let pSortCol='month', pSortDir=1, pPg=1;
+let rSortCol='month', rSortDir=1, rPg=1;
+const PER=50;
+
+// ── FILTER DEFINITIONS ───────────────────────────────────────────────────────
+const PARTNER_FILTERS=[
+  {id:'pf-month',    key:'month',       label:'Month',       ms:true, hs:false},
+  {id:'pf-segment',  key:'segment',     label:'Segment',     ms:false,hs:false},
+  {id:'pf-partnertype',key:'partnerType',label:'Partner type',ms:false,hs:false},
+  {id:'pf-cam',      key:'cam',         label:'CAM',         ms:false,hs:false},
+  {id:'pf-type',     key:'type',        label:'Activity type',ms:false,hs:false},
+  {id:'pf-status',   key:'status',      label:'Status',      ms:false,hs:false},
+];
+const RTM_FILTERS=[
+  {id:'rf-month',  key:'month',  label:'Month',          ms:true, hs:false},
+  {id:'rf-region', key:'region', label:'Region',         ms:false,hs:false},
+  {id:'rf-rtm',    key:'rtm',    label:'Route to market',ms:false,hs:false},
+];
+PARTNER_FILTERS.forEach(f=>{f.selected=new Set();f.options=[];f._q='';});
+RTM_FILTERS.forEach(f=>{f.selected=new Set();f.options=[];f._q='';});
+
+// ── MULTISELECT WIDGET ────────────────────────────────────────────────────────
+function buildWidget(f, onChangeFn){
+  const wrap=document.getElementById(f.id);if(!wrap)return;wrap.innerHTML='';
+  const btn=document.createElement('button');btn.className='ms-btn';
+  btn.innerHTML='<span class="ms-lbl">'+f.label+'</span><span class="ms-arr">&#9660;</span>';
+  wrap.appendChild(btn);
+  const dd=document.createElement('div');dd.className='ms-dd';
+  let si=null;
+  if(f.hs){const sw=document.createElement('div');sw.className='ms-sw';si=document.createElement('input');si.type='text';si.className='ms-si';si.placeholder='Search...';sw.appendChild(si);dd.appendChild(sw);si.addEventListener('input',()=>{f._q=si.value.toLowerCase();renderOpts(f);});si.addEventListener('click',e=>e.stopPropagation());}
+  f._si=si;
+  const list=document.createElement('div');list.className='ms-list';dd.appendChild(list);
+  const foot=document.createElement('div');foot.className='ms-foot';
+  const allB=document.createElement('button');allB.className='ms-fbt';allB.textContent='Select all';
+  const clrB=document.createElement('button');clrB.className='ms-fbt';clrB.textContent='Clear';
+  foot.appendChild(allB);foot.appendChild(clrB);dd.appendChild(foot);
+  wrap.appendChild(dd);
+  btn.addEventListener('click',e=>{e.stopPropagation();const wo=dd.classList.contains('open');closeAll();if(!wo){dd.classList.add('open');btn.classList.add('open');if(si){si.value='';f._q='';renderOpts(f);si.focus();}}});
+  allB.addEventListener('click',e=>{e.stopPropagation();f.options.forEach(o=>f.selected.add(o));renderOpts(f);updBtn(f);onChangeFn();});
+  clrB.addEventListener('click',e=>{e.stopPropagation();f.selected.clear();renderOpts(f);updBtn(f);onChangeFn();});
+  f._btn=btn;f._dd=dd;f._list=list;
+  renderOpts(f);
+}
+function renderOpts(f){
+  const opts=f._q?f.options.filter(o=>o.toLowerCase().includes(f._q)):f.options;
+  if(!opts.length){f._list.innerHTML='<div class="ms-empty">No options</div>';return;}
+  f._list.innerHTML=opts.map(o=>'<div class="ms-opt'+(f.selected.has(o)?' sel':'')+'" data-v="'+esc(o)+'"><div class="ms-chk"></div><div class="ms-opt-lbl" title="'+esc(o)+'">'+esc(o)+'</div></div>').join('');
+  f._list.querySelectorAll('.ms-opt').forEach(el=>{el.addEventListener('click',e=>{e.stopPropagation();const v=el.dataset.v;if(f.selected.has(v))f.selected.delete(v);else f.selected.add(v);renderOpts(f);updBtn(f);});});
+}
+function updBtn(f){
+  const lbl=f._btn.querySelector('.ms-lbl');
+  if(f.selected.size===0){lbl.textContent=f.label;f._btn.classList.remove('has-sel');const c=f._btn.querySelector('.ms-cnt');if(c)c.remove();}
+  else{lbl.textContent=f.selected.size===1?[...f.selected][0]:f.label;f._btn.classList.add('has-sel');let c=f._btn.querySelector('.ms-cnt');if(!c){c=document.createElement('span');c.className='ms-cnt';f._btn.appendChild(c);}c.textContent=f.selected.size;}
+}
+function closeAll(){[...PARTNER_FILTERS,...RTM_FILTERS].forEach(f=>{if(f._dd)f._dd.classList.remove('open');if(f._btn)f._btn.classList.remove('open');});}
+document.addEventListener('click',closeAll);
+
+// ── GIS / AUTH ────────────────────────────────────────────────────────────────
+function loadGIS(){
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+  s.onload=()=>{
+    const tc=google.accounts.oauth2.initTokenClient({
+      client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/spreadsheets.readonly',
+      callback:r=>{
+        if(r.error){showErr('Sign-in failed: '+r.error);return;}
+        token=r.access_token;
+        sessionStorage.setItem('gtoken',token);
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('app').style.display='flex';
+        fetchAll();
+      }
+    });
+    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:''}));
+    const saved=sessionStorage.getItem('gtoken');
+    if(saved){token=saved;document.getElementById('auth-screen').style.display='none';document.getElementById('app').style.display='flex';fetchAll();}
+  };
+  document.head.appendChild(s);
+}
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function fetchAll(){
+  showLoad(true);hideErr();
+  try{
+    const[pR,bR]=await Promise.all([
+      fetchRange(PARTNER_SHEET,'NorAm Master Log!A:R'),
+      fetchRange(BUDGET_SHEET,'Expenses!A:Z')
+    ]);
+    parsePartners(pR.values||[]);
+    parseRTM(bR.values||[]);
+    document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
+    buildPartnerFilterOpts();
+    buildRTMFilterOpts();
+    PARTNER_FILTERS.forEach(f=>buildWidget(f,applyPartnerFilters));
+    RTM_FILTERS.forEach(f=>buildWidget(f,applyRTMFilters));
+    // Default to current month
+    const curMonth=MONTHS[new Date().getMonth()];
+    [PARTNER_FILTERS,RTM_FILTERS].forEach(filters=>{
+      const mf=filters.find(f=>f.key==='month');
+      if(mf){const match=mf.options.find(o=>o.toLowerCase().startsWith(curMonth.toLowerCase()));if(match){mf.selected.add(match);if(mf._btn)updBtn(mf);if(mf._list)renderOpts(mf);}}
+    });
+    applyPartnerFilters();
+    applyRTMFilters();
+  }catch(e){showErr('Could not load data: '+e.message);}
+  showLoad(false);
+}
+
+async function fetchRange(sheetId,range){
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+sheetId+'/values/'+encodeURIComponent(range);
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok){
+    if(r.status===401){sessionStorage.removeItem('gtoken');token=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';throw new Error('Session expired.');}
+    const e=await r.json();throw new Error(e.error?.message||r.statusText);
+  }
+  return r.json();
+}
+
+// ── PARSE PARTNER DATA ────────────────────────────────────────────────────────
+function parsePartners(rows){
+  if(!rows.length)return;
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,6);i++){
+    const r=rows[i].map(c=>String(c).toLowerCase());
+    if(r.some(c=>c==='qtr')||r.some(c=>c==='segment')){hi=i;break;}
+  }
+  const h=rows[hi].map(c=>String(c).toLowerCase().trim());
+  const ci=k=>h.findIndex(c=>c.includes(k));
+  const cQtr=ci('qtr');
+  const cSeg=ci('segment');
+  const cPType=ci('type of partner');
+  const cAcct=ci('account name');
+  const cCAM=ci('cam');
+  const cActivity=ci('activity name');
+  const cLocation=ci('location');
+  const cCost=ci('cost');
+  const cType=ci('type');
+  const cStatus=ci('status');
+  const cMonthNo=h.findIndex(c=>c==='month no.');
+  const cMonth=h.findIndex((c,i)=>c==='month'&&i>cMonthNo);
+  partnerData=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];
+    const cost=parseFloat(String(r[cCost]||'').replace(/[$,\s]/g,''));
+    const seg=cl(r[cSeg]);if(!seg)continue;
+    const monthNum=parseInt(r[cMonthNo])||0;
+    const monthName=monthNum>=1&&monthNum<=12?MONTHS[monthNum-1]:(cl(r[cMonth])||'');
+    partnerData.push({
+      qtr:cl(r[cQtr]),segment:seg,partnerType:cl(r[cPType]),
+      accountName:cl(r[cAcct]),cam:cl(r[cCAM]),
+      activityName:cl(r[cActivity]),location:cl(r[cLocation]),
+      cost:isNaN(cost)?0:cost,type:cl(r[cType]),
+      status:cl(r[cStatus]),month:monthName
+    });
+  }
+}
+
+// ── PARSE RTM DATA ────────────────────────────────────────────────────────────
+function parseRTM(rows){
+  if(!rows.length)return;
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const r=rows[i].map(c=>String(c).toLowerCase());
+    if(r.some(c=>c==='month')&&r.some(c=>c==='owner')){hi=i;break;}
+  }
+  const h=rows[hi].map(c=>String(c).toLowerCase().trim());
+  const ci=k=>h.findIndex(c=>c.includes(k));
+  const cM=h.findIndex(c=>c==='month');
+  const cOwner=h.findIndex(c=>c==='owner');
+  const cVendor=ci('vendor')!==-1?ci('vendor'):ci('campaign');
+  const cRTM=ci('route to market');
+  const cLine=ci('top-level')!==-1?ci('top-level'):ci('budget line');
+  const cRegion=h.findIndex(c=>c==='region');
+  const cAmt=ci('total spend')!==-1?ci('total spend'):ci('amount');
+  rtmData=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];
+    const rtm=cl(r[cRTM]);
+    const amt=parseFloat(String(r[cAmt]||'').replace(/[$,\s]/g,''));
+    if(!rtm||!amt||isNaN(amt)||amt<=0)continue;
+    const m=String(r[cM]||'').trim();if(!m)continue;
+    rtmData.push({month:m,owner:cl(r[cOwner]),vendor:cl(r[cVendor]),rtm,budgetLine:cl(r[cLine]),region:cl(r[cRegion]),amount:amt});
+  }
+}
+const cl=v=>String(v||'').trim();
+
+// ── FILTER OPTIONS ────────────────────────────────────────────────────────────
+function buildPartnerFilterOpts(){
+  const uniq=(key,ms)=>{
+    const vals=[...new Set(partnerData.map(d=>d[key]).filter(Boolean))];
+    if(ms)return vals.sort((a,b)=>{const ai=MONTHS.findIndex(m=>a.toLowerCase().startsWith(m.toLowerCase()));const bi=MONTHS.findIndex(m=>b.toLowerCase().startsWith(m.toLowerCase()));return(ai<0?99:ai)-(bi<0?99:bi);});
+    return vals.sort();
+  };
+  PARTNER_FILTERS.forEach(f=>{f.options=uniq(f.key,f.ms);});
+}
+function buildRTMFilterOpts(){
+  const uniq=(key,ms)=>{
+    const vals=[...new Set(rtmData.map(d=>d[key]).filter(Boolean))];
+    if(ms)return vals.sort((a,b)=>{const ai=MONTHS.findIndex(m=>a.toLowerCase().startsWith(m.toLowerCase()));const bi=MONTHS.findIndex(m=>b.toLowerCase().startsWith(m.toLowerCase()));return(ai<0?99:ai)-(bi<0?99:bi);});
+    return vals.sort();
+  };
+  RTM_FILTERS.forEach(f=>{f.options=uniq(f.key,f.ms);});
+}
+
+// ── APPLY FILTERS ─────────────────────────────────────────────────────────────
+function applyPartnerFilters(){
+  const fS=document.getElementById('pf-search').value.toLowerCase().trim();
+  filteredPartners=partnerData.filter(d=>{
+    for(const f of PARTNER_FILTERS){if(f.selected.size>0&&!f.selected.has(d[f.key]))return false;}
+    if(fS&&![d.accountName,d.activityName,d.cam,d.type].some(s=>s.toLowerCase().includes(fS)))return false;
+    return true;
+  });
+  const n=PARTNER_FILTERS.reduce((s,f)=>s+(f.selected.size>0?1:0),0)+(fS?1:0);
+  const badge=document.getElementById('pf-badge');
+  badge.textContent=n+' active';badge.style.display=n?'inline-block':'none';
+  pPg=1;renderPartnerMetrics();renderPartnerCharts();renderPartnerTable();
+}
+
+function applyRTMFilters(){
+  const fS=document.getElementById('rf-search').value.toLowerCase().trim();
+  filteredRTM=rtmData.filter(d=>{
+    for(const f of RTM_FILTERS){if(f.selected.size>0&&!f.selected.has(d[f.key]))return false;}
+    if(fS&&![d.vendor,d.rtm,d.owner].some(s=>s.toLowerCase().includes(fS)))return false;
+    return true;
+  });
+  const n=RTM_FILTERS.reduce((s,f)=>s+(f.selected.size>0?1:0),0)+(fS?1:0);
+  const badge=document.getElementById('rf-badge');
+  badge.textContent=n+' active';badge.style.display=n?'inline-block':'none';
+  rPg=1;renderRTMMetrics();renderRTMCharts();renderRTMTable();
+}
+
+// ── PARTNER METRICS ────────────────────────────────────────────────────────────
+function renderPartnerMetrics(){
+  const total=filteredPartners.reduce((s,d)=>s+d.cost,0);
+  const cnt=filteredPartners.length;
+  const partners=new Set(filteredPartners.map(d=>d.accountName)).size;
+  const cams=new Set(filteredPartners.map(d=>d.cam).filter(Boolean)).size;
+  st('pm-total',fmt(total));st('pm-total-sub',cnt.toLocaleString()+' activities');
+  st('pm-count',cnt.toLocaleString());st('pm-count-sub',new Set(filteredPartners.map(d=>d.type)).size+' activity types');
+  st('pm-partners',partners.toLocaleString());st('pm-partners-sub','unique partner accounts');
+  st('pm-cams',cams.toLocaleString());st('pm-cams-sub','channel account managers');
+}
+
+// ── PARTNER CHARTS ─────────────────────────────────────────────────────────────
+function renderPartnerCharts(){
+  // Spend by activity type
+  const byType=gS(filteredPartners,'type','cost');
+  renderHBar('ch-activity-type',byType,'Activity type');
+  // Spend by partner type
+  const byPType=gS(filteredPartners,'partnerType','cost');
+  renderDonut('ch-partner-type',byPType);
+  // Spend by CAM
+  const byCAM=gS(filteredPartners,'cam','cost');
+  renderHBar('ch-cam',byCAM,'CAM');
+  // Status breakdown
+  renderStatusGrid();
+}
+
+function renderHBar(id,data,label){
+  const s=Object.entries(data).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  dc(id);
+  if(!s.length)return;
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
+    type:'bar',
+    data:{labels:s.map(([k])=>k.length>22?k.slice(0,20)+'...':k),datasets:[{data:s.map(([,v])=>v),backgroundColor:s.map((_,i)=>PAL[i%PAL.length]+'28'),borderColor:s.map((_,i)=>PAL[i%PAL.length]),borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#fff',callback:v=>fmtS(v)}},y:{grid:{display:false},ticks:{font:{size:11},color:'#fff'}}}}
+  });
+}
+
+function renderDonut(id,data){
+  const s=Object.entries(data).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  dc(id);
+  if(!s.length)return;
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
+    type:'doughnut',
+    data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v),backgroundColor:PAL.slice(0,s.length),borderWidth:2,borderColor:'#111',hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#fff',padding:8,boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.label+': '+fmt(c.raw)}}}}
+  });
+}
+
+function renderStatusGrid(){
+  const statusData={};
+  filteredPartners.forEach(d=>{const s=d.status||'Unknown';statusData[s]=(statusData[s]||0)+1;});
+  const total=filteredPartners.length||1;
+  const sorted=Object.entries(statusData).sort((a,b)=>b[1]-a[1]);
+  const colors={'in progress':'#ffc700','completed':'#1D9E75','not started':'#555','awaiting partner approval':'#E8820A'};
+  document.getElementById('status-grid').innerHTML=sorted.map(([s,n])=>{
+    const col=colors[s.toLowerCase()]||'#555';
+    const pct=Math.round(n/total*100);
+    return `<div class="status-row">
+      <div class="status-label">${esc(s)}</div>
+      <div class="status-bar-wrap"><div class="status-bar" style="width:${pct}%;background:${col}"></div></div>
+      <div class="status-count">${n} (${pct}%)</div>
+    </div>`;
+  }).join('');
+}
+
+// ── PARTNER TABLE ─────────────────────────────────────────────────────────────
+function renderPartnerTable(){
+  const sorted=[...filteredPartners].sort((a,b)=>{
+    let av=a[pSortCol],bv=b[pSortCol];
+    if(pSortCol==='month'){av=MONTHS.findIndex(m=>String(av).toLowerCase().startsWith(m.toLowerCase()));if(av<0)av=99;bv=MONTHS.findIndex(m=>String(bv).toLowerCase().startsWith(m.toLowerCase()));if(bv<0)bv=99;}
+    if(pSortCol==='cost')return(av-bv)*pSortDir*-1;
+    return String(av).localeCompare(String(bv))*pSortDir;
+  });
+  const tot=sorted.length,pages=Math.ceil(tot/PER),start=(pPg-1)*PER,sl=sorted.slice(start,start+PER);
+  st('partner-tbl-cnt',tot.toLocaleString()+' activities');
+  document.getElementById('partner-tbody').innerHTML=sl.map(d=>`
+    <tr>
+      <td>${esc(d.month)}</td>
+      <td><span class="badge ${segBadge(d.segment)}">${esc(d.segment)}</span></td>
+      <td><span class="badge ${ptBadge(d.partnerType)}">${esc(d.partnerType)}</span></td>
+      <td><strong>${esc(d.accountName)}</strong></td>
+      <td>${esc(d.cam)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(d.activityName)}">${esc(d.activityName)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.location)}</td>
+      <td>${esc(d.type)}</td>
+      <td><span class="status-pill ${statusPill(d.status)}">${esc(d.status)}</span></td>
+      <td class="td-amt">${d.cost>0?fmt(d.cost):'$0'}</td>
+    </tr>`).join('');
+  st('p-pag-info',(start+1)+'\u2013'+Math.min(start+PER,tot)+' of '+tot.toLocaleString());
+  buildPagination('p-pag-btns',pPg,pages,(p)=>{pPg=p;renderPartnerTable();});
+  document.querySelectorAll('#section-partners thead th[data-col]').forEach(th=>th.classList.toggle('sorted',th.dataset.col===pSortCol));
+}
+
+// ── RTM METRICS ───────────────────────────────────────────────────────────────
+function renderRTMMetrics(){
+  const total=filteredRTM.reduce((s,d)=>s+d.amount,0);
+  const cnt=filteredRTM.length;
+  const byRTM=gS(filteredRTM,'rtm','amount');
+  const topRTM=Object.entries(byRTM).sort((a,b)=>b[1]-a[1])[0]||['-',0];
+  const routes=Object.keys(byRTM).length;
+  st('rm-total',fmt(total));st('rm-total-sub',cnt.toLocaleString()+' expenses');
+  st('rm-count',cnt.toLocaleString());st('rm-count-sub',new Set(filteredRTM.map(d=>d.owner)).size+' owners');
+  st('rm-top',topRTM[0]);st('rm-top-sub',fmt(topRTM[1]));
+  st('rm-routes',routes.toLocaleString());st('rm-routes-sub','routes to market');
+}
+
+// ── RTM CHARTS ────────────────────────────────────────────────────────────────
+function renderRTMCharts(){
+  // Monthly
+  const byM={};MONTHS.forEach(m=>byM[m]=0);
+  filteredRTM.forEach(d=>{const m=MONTHS.find(mo=>d.month.toLowerCase().startsWith(mo.toLowerCase()));if(m)byM[m]+=d.amount;});
+  const labels=MONTHS.filter(m=>byM[m]>0);
+  dc('ch-rtm-monthly');
+  if(labels.length){
+    charts['ch-rtm-monthly']=new Chart(document.getElementById('ch-rtm-monthly').getContext('2d'),{
+      type:'bar',data:{labels,datasets:[{data:labels.map(m=>byM[m]),backgroundColor:'rgba(255,199,0,0.15)',borderColor:'#ffc700',borderWidth:2,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#fff',maxRotation:45}},y:{grid:{color:'#222'},ticks:{font:{size:11},color:'#fff',callback:v=>fmtS(v)}}}}
+    });
+  }
+  // By RTM
+  renderHBar('ch-rtm-breakdown',gS(filteredRTM,'rtm','amount'),'Route to market');
+}
+
+// ── RTM TABLE ─────────────────────────────────────────────────────────────────
+function renderRTMTable(){
+  const sorted=[...filteredRTM].sort((a,b)=>{
+    let av=a[rSortCol],bv=b[rSortCol];
+    if(rSortCol==='month'){av=MONTHS.findIndex(m=>String(av).toLowerCase().startsWith(m.toLowerCase()));if(av<0)av=99;bv=MONTHS.findIndex(m=>String(bv).toLowerCase().startsWith(m.toLowerCase()));if(bv<0)bv=99;}
+    if(rSortCol==='amount')return(av-bv)*rSortDir*-1;
+    return String(av).localeCompare(String(bv))*rSortDir;
+  });
+  const tot=sorted.length,pages=Math.ceil(tot/PER),start=(rPg-1)*PER,sl=sorted.slice(start,start+PER);
+  st('rtm-tbl-cnt',tot.toLocaleString()+' expenses');
+  if(!tot){document.getElementById('rtm-tbody').innerHTML='<tr><td colspan="7" class="empty-state">No Route to Market data found. Make sure the Route to Market column is populated in the Expenses tab.</td></tr>';st('r-pag-info','0 expenses');document.getElementById('r-pag-btns').innerHTML='';return;}
+  document.getElementById('rtm-tbody').innerHTML=sl.map(d=>`
+    <tr>
+      <td>${esc(d.month)}</td>
+      <td><strong>${esc(d.owner)}</strong></td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(d.vendor)}">${esc(d.vendor)}</td>
+      <td><strong style="color:var(--gold)">${esc(d.rtm)}</strong></td>
+      <td>${esc(d.budgetLine)}</td>
+      <td>${esc(d.region)}</td>
+      <td class="td-amt">${fmt(d.amount)}</td>
+    </tr>`).join('');
+  st('r-pag-info',(start+1)+'\u2013'+Math.min(start+PER,tot)+' of '+tot.toLocaleString());
+  buildPagination('r-pag-btns',rPg,pages,(p)=>{rPg=p;renderRTMTable();});
+  document.querySelectorAll('#section-rtm thead th[data-col]').forEach(th=>th.classList.toggle('sorted',th.dataset.col===rSortCol));
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function buildPagination(id,pg,pages,onClick){
+  const pb=document.getElementById(id);pb.innerHTML='';
+  const mkB=(lbl,en,fn,act=false)=>{const b=document.createElement('button');b.className='pbt'+(act?' active':'');b.textContent=lbl;b.disabled=!en;if(en)b.addEventListener('click',fn);return b;};
+  pb.appendChild(mkB('\u2190',pg>1,()=>onClick(pg-1)));
+  pgr(pg,pages).forEach(p=>{if(p==='...'){const e=document.createElement('span');e.textContent='...';e.style.cssText='padding:0 4px;color:#666;font-size:12px;align-self:center';pb.appendChild(e);}else pb.appendChild(mkB(p,true,()=>onClick(p),p===pg));});
+  pb.appendChild(mkB('\u2192',pg<pages,()=>onClick(pg+1)));
+}
+const gS=(data,key,valKey)=>data.reduce((acc,d)=>{const k=d[key]||'Unknown';acc[k]=(acc[k]||0)+(d[valKey]||0);return acc;},{});
+const fmt=n=>n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1000?'$'+Math.round(n).toLocaleString():'$'+n.toFixed(2);
+const fmtS=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1000?'$'+(n/1000).toFixed(0)+'k':'$'+n;
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+const dc=id=>{if(charts[id]){charts[id].destroy();delete charts[id];}};
+const showLoad=v=>document.getElementById('loading').classList.toggle('show',v);
+const showErr=msg=>{const b=document.getElementById('error-bar');b.textContent=msg;b.classList.add('show');};
+const hideErr=()=>document.getElementById('error-bar').classList.remove('show');
+const pgr=(cur,tot)=>{if(tot<=7)return Array.from({length:tot},(_,i)=>i+1);if(cur<=4)return[1,2,3,4,5,'...',tot];if(cur>=tot-3)return[1,'...',tot-4,tot-3,tot-2,tot-1,tot];return[1,'...',cur-1,cur,cur+1,'...',tot];};
+const segBadge=s=>{if(!s)return'b-def';const l=s.toLowerCase();if(l.includes('classic'))return'b-classic';if(l.includes('msp'))return'b-msp';return'b-def';};
+const ptBadge=s=>{if(!s)return'b-def';const l=s.toLowerCase();if(l.includes('reseller'))return'b-reseller';if(l.includes('distributor'))return'b-distributor';if(l.includes('msp'))return'b-msp';return'b-def';};
+const statusPill=s=>{if(!s)return'sp-notstarted';const l=s.toLowerCase();if(l.includes('progress'))return'sp-progress';if(l.includes('complet'))return'sp-complete';if(l.includes('awaiting'))return'sp-awaiting';return'sp-notstarted';};
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeTab=btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('section-'+activeTab).classList.add('active');
+    document.getElementById('partner-filters').style.display=activeTab==='partners'?'flex':'none';
+    document.getElementById('rtm-filters').style.display=activeTab==='rtm'?'flex':'none';
+    if(activeTab==='partners'){applyPartnerFilters();}
+    else{applyRTMFilters();}
+  });
+});
+
+document.getElementById('pf-search').addEventListener('input',applyPartnerFilters);
+document.getElementById('pf-clear').addEventListener('click',()=>{PARTNER_FILTERS.forEach(f=>{f.selected.clear();f._q='';if(f._btn)updBtn(f);if(f._list)renderOpts(f);});document.getElementById('pf-search').value='';applyPartnerFilters();});
+document.getElementById('rf-search').addEventListener('input',applyRTMFilters);
+document.getElementById('rf-clear').addEventListener('click',()=>{RTM_FILTERS.forEach(f=>{f.selected.clear();f._q='';if(f._btn)updBtn(f);if(f._list)renderOpts(f);});document.getElementById('rf-search').value='';applyRTMFilters();});
+
+document.getElementById('refresh-btn').addEventListener('click',()=>{const b=document.getElementById('refresh-btn');b.classList.add('spinning');fetchAll().finally(()=>b.classList.remove('spinning'));});
+document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;sessionStorage.removeItem('gtoken');document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
+
+document.querySelectorAll('#section-partners thead th[data-col]').forEach(th=>{th.addEventListener('click',()=>{if(pSortCol===th.dataset.col)pSortDir*=-1;else{pSortCol=th.dataset.col;pSortDir=1;}pPg=1;renderPartnerTable();});});
+document.querySelectorAll('#section-rtm thead th[data-col]').forEach(th=>{th.addEventListener('click',()=>{if(rSortCol===th.dataset.col)rSortDir*=-1;else{rSortCol=th.dataset.col;rSortDir=1;}rPg=1;renderRTMTable();});});
+
+loadGIS();
+</script>
+</body>
+</html>
