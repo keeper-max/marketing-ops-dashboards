@@ -426,7 +426,7 @@ async function fetchAll(){
 }
 
 async function fetchRange(sheetId,range){
-  const url='https://sheets.googleapis.com/v4/spreadsheets/'+sheetId+'/values/'+encodeURIComponent(range);
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+sheetId+'/values/'+encodeURIComponent(range).replace(/%27/g,"'");
   const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
   if(!r.ok){
     if(r.status===401){sessionStorage.removeItem('gtoken');token=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';throw new Error('Session expired.');}
