@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keeper PPC Pacing Dashboard</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--bg1:#111;--bg2:#161616;--bg3:#1c1c1c;--border:#222;--border2:#2a2a2a;--gold:#ffc700;--gold-dim:rgba(255,199,0,.12);--white:#fff;--gray:#ccc;--gray2:#fff;--gray3:#ccc;--blue:#378ADD;--blue-dim:rgba(55,138,221,.15);--purple:#7F77DD;--purple-dim:rgba(127,119,221,.15);--teal:#1D9E75;--teal-dim:rgba(29,158,117,.15);--orange:#E8820A;--orange-dim:rgba(232,130,10,.15);--danger:#E24B4A;--danger-dim:rgba(226,75,74,.15);--r:8px;--rsm:4px;--rlg:12px;--s0:0 1px 3px rgba(0,0,0,.07);--slg:0 12px 32px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--white);min-height:100vh;font-size:14px;line-height:1.5}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#000}
+.auth-card{background:var(--bg1);border-radius:16px;padding:48px;max-width:420px;width:100%;text-align:center;border:1px solid var(--border2);box-shadow:var(--slg)}
+.auth-card h1{font-size:22px;font-weight:700;letter-spacing:-.3px;margin-bottom:8px}
+.auth-card p{color:var(--gray);font-size:14px;margin-bottom:32px;line-height:1.6}
+.sign-in-btn{display:inline-flex;align-items:center;gap:10px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--white)}
+.sign-in-btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.sign-in-btn img{width:18px;height:18px}
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,199,0,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+.loading-txt{color:var(--gray);font-size:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#app{display:none;flex-direction:column;min-height:100vh}
+header{background:#000;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border)}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.hdr-logo{width:30px;height:30px;border-radius:6px;overflow:hidden}
+header h1{font-size:14px;font-weight:600}
+.hdr-meta{font-size:11px;color:var(--gray3);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:var(--rsm);color:var(--gray);font-size:12px;padding:6px 10px;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none}
+.hdr-btn:hover{border-color:var(--gold);color:var(--gold)}
+.hdr-btn.spinning svg{animation:spin .8s linear infinite}
+.signout-btn{background:none;border:none;color:var(--gray3);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:var(--rsm);font-family:inherit;transition:color .15s}
+.signout-btn:hover{color:var(--white)}
+.tab-nav{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 32px;display:flex}
+.tab-btn{height:44px;padding:0 18px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--gray);cursor:pointer;font-family:inherit;transition:all .15s;margin-bottom:-1px}
+.tab-btn:hover{color:var(--white)}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.controls{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 32px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ctrl-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3);margin-right:2px}
+.ctrl-select{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--rsm);font-size:13px;font-family:inherit;color:var(--white);background:var(--bg2);cursor:pointer;outline:none;transition:border-color .15s}
+.ctrl-select:focus{border-color:var(--gold)}
+.ctrl-select option{background:var(--bg2)}
+.market-toggles{display:flex;gap:6px;flex-wrap:wrap}
+.mkt-toggle{height:28px;padding:0 12px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:inherit;color:var(--gray);background:var(--bg2);cursor:pointer;transition:all .15s}
+.mkt-toggle.active{color:#000;border-color:transparent;font-weight:600}
+.mkt-toggle.active.japan{background:#ffc700}
+.mkt-toggle.active.nam{background:#378ADD}
+.mkt-toggle.active.emea{background:#7F77DD}
+.mkt-toggle.active.b2c{background:#1D9E75}
+main{padding:24px 32px;flex:1;max-width:1440px;width:100%;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.pacing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.pacing-card{background:var(--bg1);border-radius:var(--rlg);padding:20px;border:1px solid var(--border);position:relative;overflow:hidden}
+.pacing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.pc-japan::before{background:#ffc700}
+.pc-nam::before{background:#378ADD}
+.pc-emea::before{background:#7F77DD}
+.pc-b2c::before{background:#1D9E75}
+.pc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pc-market{font-size:13px;font-weight:600;color:var(--white)}
+.pc-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px}
+.ps-on-track{background:var(--teal-dim);color:var(--teal)}
+.ps-over{background:var(--danger-dim);color:var(--danger)}
+.ps-under{background:rgba(55,138,221,.15);color:var(--blue)}
+.ps-overspend{background:var(--orange-dim);color:var(--orange)}
+.pc-budget{font-size:11px;color:var(--gray3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.pc-main-val{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:12px}
+.pc-bar-wrap{height:6px;background:var(--bg3);border-radius:3px;margin-bottom:10px;overflow:hidden}
+.pc-bar{height:6px;border-radius:3px;transition:width .5s ease}
+.pc-bar.ok{background:var(--teal)}
+.pc-bar.warn{background:var(--orange)}
+.pc-bar.over{background:var(--danger)}
+.pc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pc-stat{background:var(--bg2);border-radius:6px;padding:8px 10px}
+.pc-stat-lbl{font-size:10px;color:var(--gray3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.pc-stat-val{font-size:13px;font-weight:600;color:var(--white)}
+.pc-stat-val.pos{color:var(--teal)}
+.pc-stat-val.neg{color:var(--danger)}
+.pc-stat-val.warn{color:var(--orange)}
+.pc-proj{margin-top:10px;padding:10px;background:var(--bg2);border-radius:6px;display:flex;justify-content:space-between;align-items:center}
+.pc-proj-lbl{font-size:11px;color:var(--gray3)}
+.pc-proj-val{font-size:13px;font-weight:700}
+.pc-proj-val.over-proj{color:var(--danger)}
+.pc-proj-val.on-proj{color:var(--teal)}
+.pc-proj-val.under-proj{color:var(--blue)}
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.sum-card{background:var(--bg1);border-radius:var(--rlg);padding:16px 18px;border:1px solid var(--border)}
+.sum-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3);margin-bottom:8px}
+.sum-val{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.sum-sub{font-size:12px;color:var(--gray)}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.chart-card{background:var(--bg1);border-radius:var(--rlg);padding:18px 20px;border:1px solid var(--border)}
+.chart-hdr{margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:600;color:var(--white)}
+.chart-sub{font-size:11px;color:var(--gray);margin-top:1px}
+canvas{max-height:240px}
+.days-indicator{display:flex;align-items:center;gap:8px;margin-bottom:24px;background:var(--bg1);border-radius:var(--rlg);padding:14px 20px;border:1px solid var(--border)}
+.days-label{font-size:12px;color:var(--gray3);flex-shrink:0;min-width:120px}
+.days-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.days-bar{height:8px;background:var(--gold);border-radius:4px;transition:width .5s}
+.days-text{font-size:12px;color:var(--gray);flex-shrink:0;min-width:100px;text-align:right}
+.table-card{background:var(--bg1);border-radius:var(--rlg);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:600}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:9px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--gray3);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+tbody td{padding:10px 14px;vertical-align:middle;color:var(--white)}
+.td-r{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.td-bold{font-weight:700}
+.badge-market{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.bm-japan{background:rgba(255,199,0,.15);color:#ffc700}
+.bm-nam{background:var(--blue-dim);color:var(--blue)}
+.bm-emea{background:var(--purple-dim);color:var(--purple)}
+.bm-b2c{background:var(--teal-dim);color:var(--teal)}
+.total-row{background:var(--bg2)!important;font-weight:700}
+.total-row td{color:var(--white)!important;border-top:1px solid var(--border2)}
+.error-bar{display:none;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--danger)}.error-bar.show{display:block}
+@media(max-width:1100px){.pacing-grid{grid-template-columns:repeat(2,1fr)}.summary-row{grid-template-columns:repeat(3,1fr)}.charts-2{grid-template-columns:1fr}}
+@media(max-width:700px){main,header,.controls,.tab-nav{padding-left:16px;padding-right:16px}.pacing-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="auth-screen">
+  <div style="background:var(--bg1);border-radius:16px;padding:48px;max-width:420px;width:100%;text-align:center;border:1px solid var(--border2)">
+    <div style="width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;overflow:hidden"><img src="favicon.png" style="width:52px;height:52px;border-radius:50%"></div>
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:8px">PPC Pacing Dashboard</h1>
+    <p style="color:var(--gray);font-size:14px;margin-bottom:32px;line-height:1.6">Sign in with your Keeper Google Workspace account.</p>
+    <button class="sign-in-btn" id="sign-in-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google</button>
+  </div>
+</div>
+<div id="loading"><div class="spinner"></div><div class="loading-txt">Loading PPC data...</div></div>
+<div id="app">
+  <header>
+    <div class="hdr-left">
+      <div class="hdr-logo"><img src="favicon.png" style="width:30px;height:30px;border-radius:6px;display:block"></div>
+      <div><h1>PPC Pacing Dashboard</h1><div class="hdr-meta" id="last-updated">-</div></div>
+    </div>
+    <div class="hdr-right">
+      <a href="index.html" class="hdr-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>All dashboards</a>
+      <button class="hdr-btn" id="refresh-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refresh</button>
+      <button class="signout-btn" id="signout-btn">Sign out</button>
+    </div>
+  </header>
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="pacing">Current month pacing</button>
+    <button class="tab-btn" data-tab="history">Historical spend</button>
+  </div>
+  <div class="controls">
+    <span class="ctrl-label">Month</span>
+    <select class="ctrl-select" id="month-select"></select>
+    <span class="ctrl-label" style="margin-left:12px">Markets</span>
+    <div class="market-toggles" id="market-toggles"></div>
+  </div>
+  <main>
+    <div class="error-bar" id="error-bar"></div>
+    <!-- PACING TAB -->
+    <div class="section active" id="section-pacing">
+      <div class="days-indicator">
+        <div class="days-label" id="days-label">-</div>
+        <div class="days-bar-wrap"><div class="days-bar" id="days-bar" style="width:0%"></div></div>
+        <div class="days-text" id="days-text">-</div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-card"><div class="sum-lbl">Total budget</div><div class="sum-val" style="color:var(--gold)" id="s-budget">-</div><div class="sum-sub" id="s-budget-sub">-</div></div>
+        <div class="sum-card"><div class="sum-lbl">MTD spend</div><div class="sum-val" style="color:var(--blue)" id="s-mtd">-</div><div class="sum-sub" id="s-mtd-sub">-</div></div>
+        <div class="sum-card"><div class="sum-lbl">Budget remaining</div><div class="sum-val" id="s-remaining">-</div><div class="sum-sub" id="s-remaining-sub">-</div></div>
+        <div class="sum-card"><div class="sum-lbl">EOM projection</div><div class="sum-val" id="s-proj">-</div><div class="sum-sub" id="s-proj-sub">-</div></div>
+        <div class="sum-card"><div class="sum-lbl">Yesterday spend</div><div class="sum-val" style="color:var(--purple)" id="s-yesterday">-</div><div class="sum-sub" id="s-yesterday-sub">-</div></div>
+      </div>
+      <div class="pacing-grid" id="pacing-cards"></div>
+      <div class="table-card">
+        <div class="table-hdr"><div class="table-title">Pacing summary</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Market</th>
+              <th class="td-r">Monthly budget</th>
+              <th class="td-r">Budgeted MTD</th>
+              <th class="td-r">Actual MTD</th>
+              <th class="td-r">MTD diff ($)</th>
+              <th class="td-r">MTD diff (%)</th>
+              <th class="td-r">Budgeted daily</th>
+              <th class="td-r">Actual daily</th>
+              <th class="td-r">EOM projection</th>
+              <th class="td-r">Budget remaining</th>
+              <th class="td-r">Yesterday</th>
+            </tr></thead>
+            <tbody id="pacing-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- HISTORY TAB -->
+    <div class="section" id="section-history">
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Monthly spend by market</div><div class="chart-sub">Actual spend per market per month</div></div>
+          <canvas id="ch-monthly-market"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Budget vs actual by month</div><div class="chart-sub">Total budget vs total spend</div></div>
+          <canvas id="ch-bva-monthly"></canvas>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Market share of spend</div><div class="chart-sub">How budget is distributed across markets</div></div>
+          <canvas id="ch-market-share"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Daily spend trend</div><div class="chart-sub">Rolling daily spend for selected month</div></div>
+          <canvas id="ch-daily-trend"></canvas>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-hdr"><div class="table-title">Monthly summary by market</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Month</th>
+              <th>Market</th>
+              <th class="td-r">Budget</th>
+              <th class="td-r">Actual spend</th>
+              <th class="td-r">Variance ($)</th>
+              <th class="td-r">Variance (%)</th>
+              <th class="td-r">% budget used</th>
+            </tr></thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const CLIENT_ID='396787219533-38oqi64vqis5pj6iaa7s3r15n2h35dok.apps.googleusercontent.com';
+const SHEET_ID='1xWD3wiarxApqxVkbLN4gNcaNPh8-LDVfkV-J_O8gHm0';
+const MONTHS_LIST=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MARKET_COLORS={'Japan B2B':'#ffc700','NAM B2B':'#378ADD','EMEA B2B':'#7F77DD','Global B2C':'#1D9E75'};
+const MARKET_CLASS={'Japan B2B':'japan','NAM B2B':'nam','EMEA B2B':'emea','Global B2C':'b2c'};
+const MARKET_PC={'Japan B2B':'pc-japan','NAM B2B':'pc-nam','EMEA B2B':'pc-emea','Global B2C':'pc-b2c'};
+
+let spendData=[], budgetData=[], charts={}, token=null, activeTab='pacing';
+let selectedMonth='', activeMarkets=new Set();
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function loadGIS(){
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+  s.onload=()=>{
+    const tc=google.accounts.oauth2.initTokenClient({
+      client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/spreadsheets.readonly',
+      callback:r=>{
+        if(r.error){showErr('Sign-in failed: '+r.error);return;}
+        token=r.access_token;sessionStorage.setItem('gtoken',token);
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('app').style.display='flex';
+        fetchAll();
+      }
+    });
+    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:''}));
+    const saved=sessionStorage.getItem('gtoken');
+    if(saved){token=saved;document.getElementById('auth-screen').style.display='none';document.getElementById('app').style.display='flex';fetchAll();}
+  };
+  document.head.appendChild(s);
+}
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function fetchAll(){
+  showLoad(true);hideErr();
+  try{
+    const[sR,bR]=await Promise.all([
+      fetchRange('LocalBlended!A:E'),
+      fetchRange('Budgets!A:C')
+    ]);
+    parseSpend(sR.values||[]);
+    parseBudgets(bR.values||[]);
+    document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
+    buildControls();
+    render();
+  }catch(e){showErr('Could not load data: '+e.message);}
+  showLoad(false);
+}
+
+async function fetchRange(range){
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent(range);
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok){
+    if(r.status===401){sessionStorage.removeItem('gtoken');token=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';throw new Error('Session expired.');}
+    const e=await r.json();throw new Error(e.error?.message||r.statusText);
+  }
+  return r.json();
+}
+
+// ── PARSE ─────────────────────────────────────────────────────────────────────
+function parseSpend(rows){
+  if(!rows.length)return;
+  // Header row 0: Date, Account, Campaign name, Cost (USD), Market
+  spendData=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const dateStr=String(r[0]||'');
+    const cost=parseFloat(String(r[3]||'').replace(/[$,]/g,''));
+    const market=String(r[4]||'').trim();
+    if(!dateStr||isNaN(cost)||!market)continue;
+    // Parse date
+    const d=new Date(dateStr);
+    if(isNaN(d.getTime()))continue;
+    const month=MONTHS_LIST[d.getMonth()];
+    const year=d.getFullYear();
+    const monthKey=month+' '+year;
+    spendData.push({date:d,month,year,monthKey,market,cost,day:d.getDate()});
+  }
+}
+
+function parseBudgets(rows){
+  if(!rows.length)return;
+  // Header row 0: Account, Month, Monthly Budget
+  budgetData=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const market=String(r[0]||'').trim();
+    const dateStr=String(r[1]||'');
+    const budget=parseFloat(String(r[2]||'').replace(/[$,]/g,''));
+    if(!market||!dateStr||isNaN(budget))continue;
+    const d=new Date(dateStr);
+    if(isNaN(d.getTime()))continue;
+    const month=MONTHS_LIST[d.getMonth()];
+    const year=d.getFullYear();
+    budgetData.push({market,month,year,monthKey:month+' '+year,budget});
+  }
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────────
+function buildControls(){
+  // Get available months from spend data
+  const monthKeys=[...new Set(spendData.map(d=>d.monthKey))].sort((a,b)=>{
+    const [am,ay]=a.split(' ');const [bm,by]=b.split(' ');
+    if(ay!==by)return parseInt(ay)-parseInt(by);
+    return MONTHS_LIST.indexOf(am)-MONTHS_LIST.indexOf(bm);
+  });
+
+  const sel=document.getElementById('month-select');
+  sel.innerHTML='';
+  monthKeys.forEach(mk=>{const o=document.createElement('option');o.value=mk;o.textContent=mk;sel.appendChild(o);});
+
+  // Default to current month
+  const now=new Date();
+  const curKey=MONTHS_LIST[now.getMonth()]+' '+now.getFullYear();
+  selectedMonth=monthKeys.includes(curKey)?curKey:monthKeys[monthKeys.length-1];
+  sel.value=selectedMonth;
+
+  // Markets
+  const markets=Object.keys(MARKET_COLORS);
+  activeMarkets=new Set(markets);
+  const toggleWrap=document.getElementById('market-toggles');
+  toggleWrap.innerHTML='';
+  markets.forEach(m=>{
+    const btn=document.createElement('button');
+    btn.className='mkt-toggle active '+MARKET_CLASS[m];
+    btn.textContent=m;
+    btn.dataset.market=m;
+    btn.addEventListener('click',()=>{
+      if(activeMarkets.has(m)){if(activeMarkets.size===1)return;activeMarkets.delete(m);btn.classList.remove('active');}
+      else{activeMarkets.add(m);btn.classList.add('active');}
+      render();
+    });
+    toggleWrap.appendChild(btn);
+  });
+}
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────────
+function render(){
+  if(activeTab==='pacing')renderPacing();
+  else renderHistory();
+}
+
+// ── PACING ────────────────────────────────────────────────────────────────────
+function renderPacing(){
+  const [monthName, yearStr]=selectedMonth.split(' ');
+  const year=parseInt(yearStr);
+  const monthIdx=MONTHS_LIST.indexOf(monthName);
+  const daysInMonth=new Date(year,monthIdx+1,0).getDate();
+  const now=new Date();
+  const isCurrentMonth=(now.getMonth()===monthIdx&&now.getFullYear()===year);
+
+  // Days elapsed: if current month use today, else use full month
+  let daysElapsed, yesterday;
+  if(isCurrentMonth){
+    daysElapsed=now.getDate()-1; // completed days (exclude today, data through yesterday)
+    yesterday=new Date(now);yesterday.setDate(now.getDate()-1);
+  } else {
+    daysElapsed=daysInMonth;
+    yesterday=new Date(year,monthIdx+1,0); // last day of month
+  }
+
+  // Days progress bar
+  const pctDays=Math.round(daysElapsed/daysInMonth*100);
+  document.getElementById('days-label').textContent=monthName+' '+year+' — Day '+daysElapsed+' of '+daysInMonth;
+  document.getElementById('days-bar').style.width=pctDays+'%';
+  document.getElementById('days-text').textContent=pctDays+'% of month elapsed';
+
+  // Filter spend for selected month
+  const monthSpend=spendData.filter(d=>d.monthKey===selectedMonth&&activeMarkets.has(d.market));
+  const yesterdayStr=yesterday.toDateString();
+
+  // Per-market calcs
+  const markets=[...activeMarkets];
+  const marketStats={};
+  markets.forEach(m=>{
+    const bud=budgetData.find(b=>b.market===m&&b.monthKey===selectedMonth);
+    const budget=bud?bud.budget:0;
+    const mtdSpend=monthSpend.filter(d=>d.market===m).reduce((s,d)=>s+d.cost,0);
+    const budgetedMTD=daysElapsed>0?(budget/daysInMonth)*daysElapsed:0;
+    const budgetedDaily=budget/daysInMonth;
+    const actualDaily=daysElapsed>0?mtdSpend/daysElapsed:0;
+    const eomProj=daysElapsed>0?(mtdSpend/daysElapsed)*daysInMonth:0;
+    const remaining=budget-mtdSpend;
+    const mtdDiff=mtdSpend-budgetedMTD;
+    const mtdDiffPct=budgetedMTD>0?mtdDiff/budgetedMTD:0;
+    const yesterdaySpend=monthSpend.filter(d=>d.market===m&&d.date.toDateString()===yesterdayStr).reduce((s,d)=>s+d.cost,0);
+    // Pacing status
+    let status='on-track';
+    if(mtdSpend>budget)status='overspend';
+    else if(mtdDiffPct>0.05)status='over';
+    else if(mtdDiffPct<-0.05)status='under';
+    marketStats[m]={budget,mtdSpend,budgetedMTD,budgetedDaily,actualDaily,eomProj,remaining,mtdDiff,mtdDiffPct,yesterdaySpend,status,pctUsed:budget>0?mtdSpend/budget:0};
+  });
+
+  // Summary totals
+  const totBudget=markets.reduce((s,m)=>s+(marketStats[m].budget||0),0);
+  const totMTD=markets.reduce((s,m)=>s+(marketStats[m].mtdSpend||0),0);
+  const totRemaining=totBudget-totMTD;
+  const totProj=markets.reduce((s,m)=>s+(marketStats[m].eomProj||0),0);
+  const totYesterday=markets.reduce((s,m)=>s+(marketStats[m].yesterdaySpend||0),0);
+  const totPct=totBudget>0?totMTD/totBudget:0;
+
+  st('s-budget',fmt(totBudget));st('s-budget-sub',markets.length+' markets');
+  st('s-mtd',fmt(totMTD));st('s-mtd-sub',(totPct*100).toFixed(1)+'% of budget');
+  const remEl=document.getElementById('s-remaining');st('s-remaining',totRemaining>=0?fmt(totRemaining):'-'+fmt(Math.abs(totRemaining)));remEl.style.color=totRemaining<0?'var(--danger)':totPct>0.85?'var(--orange)':'var(--teal)';
+  st('s-remaining-sub',totRemaining>=0?'still available':'over budget');
+  const projEl=document.getElementById('s-proj');st('s-proj',fmt(totProj));
+  projEl.style.color=totProj>totBudget*1.05?'var(--danger)':totProj<totBudget*0.95?'var(--blue)':'var(--teal)';
+  st('s-proj-sub',totBudget>0?((totProj/totBudget-1)*100).toFixed(1)+'% vs budget':'');
+  st('s-yesterday',fmt(totYesterday));st('s-yesterday-sub','daily run rate: '+fmt(totMTD/(daysElapsed||1)));
+
+  // Pacing cards
+  const cardsEl=document.getElementById('pacing-cards');
+  cardsEl.innerHTML=markets.map(m=>{
+    const s=marketStats[m];
+    const barW=Math.min(s.pctUsed*100,100).toFixed(1);
+    const barClass=s.pctUsed>1?'over':s.pctUsed>0.85?'warn':'ok';
+    const statusLabels={'on-track':'On track','over':'Overpacing','under':'Underpacing','overspend':'Over budget'};
+    const statusClasses={'on-track':'ps-on-track','over':'ps-over','under':'ps-under','overspend':'ps-overspend'};
+    const projClass=s.eomProj>s.budget*1.05?'over-proj':s.eomProj<s.budget*0.95?'under-proj':'on-proj';
+    const diffColor=s.mtdDiff>=0?'neg':'pos'; // neg=red for overspend, pos=teal for under
+    return `<div class="pacing-card ${MARKET_PC[m]}">
+      <div class="pc-header">
+        <div class="pc-market">${esc(m)}</div>
+        <div class="pc-status ${statusClasses[s.status]}">${statusLabels[s.status]}</div>
+      </div>
+      <div class="pc-budget">MTD spend vs budget</div>
+      <div class="pc-main-val">${fmt(s.mtdSpend)} <span style="font-size:14px;color:var(--gray3)">/ ${fmt(s.budget)}</span></div>
+      <div class="pc-bar-wrap"><div class="pc-bar ${barClass}" style="width:${barW}%"></div></div>
+      <div class="pc-stats">
+        <div class="pc-stat"><div class="pc-stat-lbl">Budget remaining</div><div class="pc-stat-val ${s.remaining<0?'neg':''}">${s.remaining>=0?fmt(s.remaining):'-'+fmt(Math.abs(s.remaining))}</div></div>
+        <div class="pc-stat"><div class="pc-stat-lbl">% used</div><div class="pc-stat-val ${s.pctUsed>1?'neg':s.pctUsed>0.85?'warn':''}">${(s.pctUsed*100).toFixed(1)}%</div></div>
+        <div class="pc-stat"><div class="pc-stat-lbl">Budgeted daily</div><div class="pc-stat-val">${fmt(s.budgetedDaily)}</div></div>
+        <div class="pc-stat"><div class="pc-stat-lbl">Actual daily</div><div class="pc-stat-val ${s.actualDaily>s.budgetedDaily*1.05?'neg':s.actualDaily<s.budgetedDaily*0.95?'pos':''}">${fmt(s.actualDaily)}</div></div>
+      </div>
+      <div class="pc-proj">
+        <div class="pc-proj-lbl">EOM projection (${daysInMonth}-day month)</div>
+        <div class="pc-proj-val ${projClass}">${fmt(s.eomProj)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pacing table
+  const tbody=document.getElementById('pacing-tbody');
+  tbody.innerHTML=markets.map(m=>{
+    const s=marketStats[m];
+    const diffColor=s.mtdDiff>0?'color:var(--danger)':'color:var(--teal)';
+    const projColor=s.eomProj>s.budget*1.05?'color:var(--danger)':s.eomProj<s.budget*0.95?'color:var(--blue)':'color:var(--teal)';
+    return `<tr>
+      <td><span class="badge-market bm-${MARKET_CLASS[m]}">${esc(m)}</span></td>
+      <td class="td-r">${fmt(s.budget)}</td>
+      <td class="td-r">${fmt(s.budgetedMTD)}</td>
+      <td class="td-r">${fmt(s.mtdSpend)}</td>
+      <td class="td-r" style="${diffColor}">${s.mtdDiff>=0?'+':''}${fmt(s.mtdDiff)}</td>
+      <td class="td-r" style="${diffColor}">${s.mtdDiff>=0?'+':''}${(s.mtdDiffPct*100).toFixed(1)}%</td>
+      <td class="td-r">${fmt(s.budgetedDaily)}</td>
+      <td class="td-r">${fmt(s.actualDaily)}</td>
+      <td class="td-r" style="${projColor}">${fmt(s.eomProj)}</td>
+      <td class="td-r" style="${s.remaining<0?'color:var(--danger)':''}">${s.remaining>=0?fmt(s.remaining):'-'+fmt(Math.abs(s.remaining))}</td>
+      <td class="td-r">${fmt(s.yesterdaySpend)}</td>
+    </tr>`;
+  }).join('');
+
+  // Total row
+  const totRemColor=totRemaining<0?'color:var(--danger)':'';
+  const totProjColor=totProj>totBudget*1.05?'color:var(--danger)':totProj<totBudget*0.95?'color:var(--blue)':'color:var(--teal)';
+  tbody.innerHTML+=`<tr class="total-row">
+    <td class="td-bold">Total</td>
+    <td class="td-r">${fmt(totBudget)}</td>
+    <td class="td-r">${fmt(markets.reduce((s,m)=>s+marketStats[m].budgetedMTD,0))}</td>
+    <td class="td-r">${fmt(totMTD)}</td>
+    <td class="td-r">${fmt(totMTD-markets.reduce((s,m)=>s+marketStats[m].budgetedMTD,0))}</td>
+    <td class="td-r">${(totPct*100).toFixed(1)}%</td>
+    <td class="td-r">${fmt(totBudget/daysInMonth)}</td>
+    <td class="td-r">${fmt(totMTD/(daysElapsed||1))}</td>
+    <td class="td-r" style="${totProjColor}">${fmt(totProj)}</td>
+    <td class="td-r" style="${totRemColor}">${totRemaining>=0?fmt(totRemaining):'-'+fmt(Math.abs(totRemaining))}</td>
+    <td class="td-r">${fmt(totYesterday)}</td>
+  </tr>`;
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function renderHistory(){
+  // Get all month keys
+  const allMonthKeys=[...new Set(spendData.map(d=>d.monthKey))].sort((a,b)=>{
+    const[am,ay]=a.split(' ');const[bm,by]=b.split(' ');
+    if(ay!==by)return parseInt(ay)-parseInt(by);
+    return MONTHS_LIST.indexOf(am)-MONTHS_LIST.indexOf(bm);
+  });
+
+  const markets=[...activeMarkets];
+
+  // Monthly spend by market
+  const monthlyByMarket={};
+  markets.forEach(m=>{monthlyByMarket[m]={};});
+  spendData.filter(d=>activeMarkets.has(d.market)).forEach(d=>{
+    if(!monthlyByMarket[d.market])monthlyByMarket[d.market]={};
+    monthlyByMarket[d.market][d.monthKey]=(monthlyByMarket[d.market][d.monthKey]||0)+d.cost;
+  });
+
+  // Monthly budget totals
+  const monthlyBudget={};
+  allMonthKeys.forEach(mk=>{
+    monthlyBudget[mk]=markets.reduce((s,m)=>{const b=budgetData.find(b=>b.market===m&&b.monthKey===mk);return s+(b?b.budget:0);},0);
+  });
+  const monthlySpendTotal={};
+  allMonthKeys.forEach(mk=>{monthlySpendTotal[mk]=markets.reduce((s,m)=>s+(monthlyByMarket[m]?.[mk]||0),0);});
+
+  // Chart 1: Monthly spend by market (stacked bar)
+  dc('ch-monthly-market');
+  charts['ch-monthly-market']=new Chart(document.getElementById('ch-monthly-market').getContext('2d'),{
+    type:'bar',
+    data:{labels:allMonthKeys,datasets:markets.map(m=>({label:m,data:allMonthKeys.map(mk=>monthlyByMarket[m]?.[mk]||0),backgroundColor:MARKET_COLORS[m]+'55',borderColor:MARKET_COLORS[m],borderWidth:2,borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#ccc',maxRotation:45}},y:{stacked:true,grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}}}}
+  });
+
+  // Chart 2: Budget vs actual
+  dc('ch-bva-monthly');
+  charts['ch-bva-monthly']=new Chart(document.getElementById('ch-bva-monthly').getContext('2d'),{
+    type:'bar',
+    data:{labels:allMonthKeys,datasets:[{label:'Budget',data:allMonthKeys.map(mk=>monthlyBudget[mk]||0),backgroundColor:'rgba(55,138,221,.2)',borderColor:'#378ADD',borderWidth:2,borderRadius:4},{label:'Actual',data:allMonthKeys.map(mk=>monthlySpendTotal[mk]||0),backgroundColor:'rgba(255,199,0,.2)',borderColor:'#ffc700',borderWidth:2,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#ccc',maxRotation:45}},y:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}}}}
+  });
+
+  // Chart 3: Market share donut for selected month
+  const selMonthData=markets.map(m=>monthlyByMarket[m]?.[selectedMonth]||0);
+  dc('ch-market-share');
+  charts['ch-market-share']=new Chart(document.getElementById('ch-market-share').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:markets,datasets:[{data:selMonthData,backgroundColor:markets.map(m=>MARKET_COLORS[m]+'cc'),borderColor:markets.map(m=>MARKET_COLORS[m]),borderWidth:2,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#fff',padding:8,boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.label+': '+fmt(c.raw)}}}}
+  });
+
+  // Chart 4: Daily spend trend for selected month
+  const [monthName,yearStr]=selectedMonth.split(' ');
+  const year=parseInt(yearStr);
+  const monthIdx=MONTHS_LIST.indexOf(monthName);
+  const dailyData={};
+  spendData.filter(d=>d.monthKey===selectedMonth&&activeMarkets.has(d.market)).forEach(d=>{
+    const k=d.day;dailyData[k]=(dailyData[k]||0)+d.cost;
+  });
+  const days=Object.keys(dailyData).map(Number).sort((a,b)=>a-b);
+  dc('ch-daily-trend');
+  charts['ch-daily-trend']=new Chart(document.getElementById('ch-daily-trend').getContext('2d'),{
+    type:'line',
+    data:{labels:days.map(d=>monthName.slice(0,3)+' '+d),datasets:[{label:'Daily spend',data:days.map(d=>dailyData[d]||0),backgroundColor:'rgba(255,199,0,.1)',borderColor:'#ffc700',borderWidth:2,fill:true,tension:.3,pointRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#ccc',maxRotation:45}},y:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}}}}
+  });
+
+  // History table
+  const tbody=document.getElementById('history-tbody');
+  const rows=[];
+  allMonthKeys.forEach(mk=>{
+    markets.forEach(m=>{
+      const actual=monthlyByMarket[m]?.[mk]||0;
+      const bud=budgetData.find(b=>b.market===m&&b.monthKey===mk);
+      const budget=bud?bud.budget:0;
+      if(!actual&&!budget)return;
+      const variance=actual-budget;
+      const variancePct=budget>0?variance/budget:null;
+      const pctUsed=budget>0?actual/budget:null;
+      rows.push({month:mk,market:m,budget,actual,variance,variancePct,pctUsed});
+    });
+  });
+  tbody.innerHTML=rows.map(r=>`<tr>
+    <td>${esc(r.month)}</td>
+    <td><span class="badge-market bm-${MARKET_CLASS[r.market]}">${esc(r.market)}</span></td>
+    <td class="td-r">${r.budget>0?fmt(r.budget):'-'}</td>
+    <td class="td-r">${r.actual>0?fmt(r.actual):'-'}</td>
+    <td class="td-r" style="${r.variance>0?'color:var(--danger)':'color:var(--teal)'}">${r.budget>0?(r.variance>=0?'+':'')+fmt(r.variance):'-'}</td>
+    <td class="td-r" style="${r.variance>0?'color:var(--danger)':'color:var(--teal)'}">${r.variancePct!==null?(r.variancePct>=0?'+':'')+(r.variancePct*100).toFixed(1)+'%':'-'}</td>
+    <td class="td-r">${r.pctUsed!==null?'<span style="font-weight:600;color:'+(r.pctUsed>1?'var(--danger)':r.pctUsed>0.9?'var(--orange)':'var(--teal)')+'">'+((r.pctUsed)*100).toFixed(1)+'%</span>':'-'}</td>
+  </tr>`).join('');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const fmt=n=>n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1000?'$'+Math.round(n).toLocaleString():'$'+n.toFixed(2);
+const fmtS=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1000?'$'+(n/1000).toFixed(0)+'k':'$'+n;
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+const dc=id=>{if(charts[id]){charts[id].destroy();delete charts[id];}};
+const showLoad=v=>document.getElementById('loading').classList.toggle('show',v);
+const showErr=msg=>{const b=document.getElementById('error-bar');b.textContent=msg;b.classList.add('show');};
+const hideErr=()=>document.getElementById('error-bar').classList.remove('show');
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeTab=btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('section-'+activeTab).classList.add('active');
+    render();
+  });
+});
+document.getElementById('month-select').addEventListener('change',e=>{selectedMonth=e.target.value;render();});
+document.getElementById('refresh-btn').addEventListener('click',()=>{const b=document.getElementById('refresh-btn');b.classList.add('spinning');fetchAll().finally(()=>b.classList.remove('spinning'));});
+document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;sessionStorage.removeItem('gtoken');document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
+
+loadGIS();
+</script>
+</body>
+</html>
