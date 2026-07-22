@@ -403,7 +403,7 @@ async function fetchAll(){
   showLoad(true);hideErr();
   try{
     const[pR,bR]=await Promise.all([
-      fetchRange(PARTNER_SHEET,'NorAm Master Log!A:R'),
+      fetchRange(PARTNER_SHEET,"'NorAm Master Log'!A:R"),
       fetchRange(BUDGET_SHEET,'Expenses!A:Z')
     ]);
     parsePartners(pR.values||[]);
