@@ -498,12 +498,20 @@ function loadGIS(){
       callback:r=>{
         if(r.error){showErr('Sign-in failed: '+r.error);return;}
         token=r.access_token;
+        sessionStorage.setItem('gtoken', token);
         document.getElementById('auth-screen').style.display='none';
         document.getElementById('app').style.display='flex';
         fetchAll();
       }
     });
-    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:'consent'}));
+    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:''}));
+    const savedToken=sessionStorage.getItem('gtoken');
+    if(savedToken){
+      token=savedToken;
+      document.getElementById('auth-screen').style.display='none';
+      document.getElementById('app').style.display='flex';
+      fetchAll();
+    }
   };
   document.head.appendChild(s);
 }
@@ -527,7 +535,7 @@ async function fetchAll(){
 async function fetchRange(range){
   const url='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent(range);
   const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
-  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  if(!r.ok){if(r.status===401){sessionStorage.removeItem('gtoken');token=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';throw new Error('Session expired. Please sign in again.');}const e=await r.json();throw new Error(e.error?.message||r.statusText);}
   return r.json();
 }
 
@@ -721,7 +729,7 @@ const pgr=(cur,tot)=>{if(tot<=7)return Array.from({length:tot},(_,i)=>i+1);if(cu
 document.getElementById('f-search').addEventListener('input',applyFilters);
 document.getElementById('clear-btn').addEventListener('click',()=>{FILTERS.forEach(f=>{f.selected.clear();f._q='';if(f._btn)updBtn(f);if(f._list)renderOpts(f);});document.getElementById('f-search').value='';applyFilters();});
 document.getElementById('refresh-btn').addEventListener('click',()=>{const b=document.getElementById('refresh-btn');b.classList.add('spinning');fetchAll().finally(()=>b.classList.remove('spinning'));});
-document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;expData=[];budData=[];filtered=[];document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
+document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;sessionStorage.removeItem('gtoken');expData=[];budData=[];filtered=[];document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
 document.querySelectorAll('thead th[data-col]').forEach(th=>{th.addEventListener('click',()=>{if(sCol===th.dataset.col)sDir*=-1;else{sCol=th.dataset.col;sDir=1;}pg=1;renderTable();});});
 
 function exportCSV(){
