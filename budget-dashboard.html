@@ -179,6 +179,7 @@ tbody td{padding:9px 14px;vertical-align:middle;color:#fff}
   <div class="tab-nav">
     <button class="tab-btn active" data-tab="budget">Budget vs Actual</button>
     <button class="tab-btn" data-tab="actuals">Actuals</button>
+    <button class="tab-btn" data-tab="moves">Budget moves &amp; variance</button>
   </div>
   <div class="filter-bar">
     <span class="filter-label">Filter</span>
@@ -222,7 +223,7 @@ tbody td{padding:9px 14px;vertical-align:middle;color:#fff}
     </div>
     <div class="section active" id="section-budget">
       <div class="budget-metrics">
-        <div class="bmetric"><div class="bm-label">Planned budget</div><div class="bm-val" id="bm-planned">-</div><div class="bm-sub">For selected period</div></div>
+        <div class="bmetric"><div class="bm-label">Effective budget</div><div class="bm-val" id="bm-planned">-</div><div class="bm-sub">For selected period</div></div>
         <div class="bmetric"><div class="bm-label">Actual spend</div><div class="bm-val" id="bm-actual">-</div><div class="bm-sub" id="bm-actual-sub">-</div></div>
         <div class="bmetric"><div class="bm-label">Remaining budget</div><div class="bm-val" id="bm-remaining">-</div><div class="bm-sub" id="bm-remaining-sub">-</div><div class="bm-bar-wrap"><div class="bm-bar" id="bm-bar"></div></div></div>
         <div class="bmetric"><div class="bm-label">% budget used</div><div class="bm-val" id="bm-pct">-</div><div class="bm-sub" id="bm-pct-sub">-</div></div>
@@ -239,6 +240,42 @@ tbody td{padding:9px 14px;vertical-align:middle;color:#fff}
         </table></div>
       </div>
     </div>
+
+    <div class="section" id="section-moves">
+      <div class="budget-metrics">
+        <div class="bmetric"><div class="bm-label">Total moves value</div><div class="bm-val" id="mv-total">-</div><div class="bm-sub" id="mv-count">-</div></div>
+        <div class="bmetric"><div class="bm-label">Budget moved in</div><div class="bm-val" id="mv-in" style="color:#ffc700">-</div><div class="bm-sub" id="mv-in-sub">-</div></div>
+        <div class="bmetric"><div class="bm-label">Budget moved out</div><div class="bm-val" id="mv-out" style="color:#E24B4A">-</div><div class="bm-sub" id="mv-out-sub">-</div></div>
+        <div class="bmetric"><div class="bm-label">Net variance</div><div class="bm-val" id="mv-net">-</div><div class="bm-sub" id="mv-net-sub">-</div></div>
+      </div>
+      <div class="charts-2" style="margin-bottom:20px">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Net variance by budget line</div><div class="chart-sub">Positive = budget added, negative = budget removed</div></div>
+          <canvas id="ch-variance"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Budget flow by region</div><div class="chart-sub">Net budget moved in or out per region</div></div>
+          <canvas id="ch-flow-region"></canvas>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-hdr"><div class="table-title">Budget move log</div><span class="table-cnt" id="mv-tbl-cnt">-</span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr>
+            <th>Requestor</th>
+            <th>From month</th>
+            <th>To month</th>
+            <th>From line</th>
+            <th>From region</th>
+            <th>To line</th>
+            <th>To region</th>
+            <th style="text-align:right">Amount</th>
+            <th>Reason</th>
+          </tr></thead>
+          <tbody id="mv-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
   </main>
 </div>
 <script>
@@ -246,7 +283,7 @@ const CLIENT_ID='396787219533-38oqi64vqis5pj6iaa7s3r15n2h35dok.apps.googleuserco
 const SHEET_ID='1FTd9ejQJ6sLhrerbtD3kM_q5aInU4ILvasGQfV3YOJo';
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const PAL=['#ffc700','#378ADD','#7F77DD','#E8820A','#E24B4A','#0891b2','#65a30d','#c026d3','#1D9E75','#b45309'];
-let expData=[],budData=[],filtered=[],charts={},sCol='month',sDir=1,pg=1,token=null,activeTab='budget',rawHeaders=[],rawRows=[];
+let expData=[],budData=[],movesData=[],filtered=[],charts={},sCol='month',sDir=1,pg=1,token=null,activeTab='budget',rawHeaders=[],rawRows=[];
 const PER=50;
 const FILTERS=[
   {id:'ms-month',key:'month',label:'Month',ms:true,hs:false},
@@ -313,6 +350,146 @@ function updBtn(f){
 function closeAll(){FILTERS.forEach(f=>{if(f._dd)f._dd.classList.remove('open');if(f._btn)f._btn.classList.remove('open');});}
 document.addEventListener('click',closeAll);
 
+
+
+function renderMoves(){
+  const sM=FILTERS.find(f=>f.key==='month').selected;
+  const sR=FILTERS.find(f=>f.key==='region').selected;
+  const sL=FILTERS.find(f=>f.key==='budgetLine').selected;
+  const sO=FILTERS.find(f=>f.key==='owner').selected;
+
+  // Filter moves - match on from or to month/region/line
+  const fMoves=movesData.filter(d=>{
+    const monthMatch=sM.size===0||(sM.has(d.fromMonth)||sM.has(d.toMonth));
+    const regionMatch=sR.size===0||(sR.has(d.fromRegion)||sR.has(d.toRegion));
+    const lineMatch=sL.size===0||(sL.has(d.fromLine)||sL.has(d.toLine));
+    return monthMatch&&regionMatch&&lineMatch;
+  });
+
+  const totalIn=fMoves.reduce((s,d)=>s+d.amount,0);
+  const totalOut=fMoves.reduce((s,d)=>s+d.amount,0);
+  const net=totalIn-totalOut;
+
+  // Compute per-line net variance
+  const lineVar={};
+  fMoves.forEach(d=>{
+    lineVar[d.toLine]=(lineVar[d.toLine]||0)+d.amount;
+    lineVar[d.fromLine]=(lineVar[d.fromLine]||0)-d.amount;
+  });
+  // Remove zero entries
+  Object.keys(lineVar).forEach(k=>{if(lineVar[k]===0)delete lineVar[k];});
+
+  const lineEntries=Object.entries(lineVar).filter(([,v])=>v!==0).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,10);
+  const movedIn=fMoves.reduce((s,d)=>s+d.amount,0);
+
+  // Metrics
+  st('mv-total',fmt(movedIn));
+  st('mv-count',fMoves.length.toLocaleString()+' approved moves');
+  const budIn=lineEntries.filter(([,v])=>v>0).reduce((s,[,v])=>s+v,0);
+  const budOut=lineEntries.filter(([,v])=>v<0).reduce((s,[,v])=>s+Math.abs(v),0);
+  st('mv-in','+'+fmt(budIn));
+  st('mv-in-sub',lineEntries.filter(([,v])=>v>0).length+' budget lines gained');
+  st('mv-out','-'+fmt(budOut));
+  st('mv-out-sub',lineEntries.filter(([,v])=>v<0).length+' budget lines gave');
+  const netVal=budIn-budOut;
+  st('mv-net',(netVal>=0?'+':'')+fmt(netVal));
+  st('mv-net-sub',netVal>=0?'Net budget added':'Net budget removed');
+  document.getElementById('mv-net').style.color=netVal>=0?'var(--teal)':'var(--danger)';
+
+  // Variance by budget line chart
+  dc('ch-variance');
+  const varLabels=lineEntries.map(([k])=>k.length>18?k.slice(0,16)+'...':k);
+  const varVals=lineEntries.map(([,v])=>v);
+  const varColors=varVals.map(v=>v>=0?'rgba(255,199,0,0.25)':'rgba(226,75,74,0.2)');
+  const varBorders=varVals.map(v=>v>=0?'#ffc700':'#E24B4A');
+  charts['ch-variance']=new Chart(document.getElementById('ch-variance').getContext('2d'),{
+    type:'bar',
+    data:{labels:varLabels,datasets:[{data:varVals,backgroundColor:varColors,borderColor:varBorders,borderWidth:2,borderRadius:4}]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(Math.abs(c.raw))+(c.raw>=0?' added':' removed')}}},
+      scales:{
+        x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#fff',callback:v=>(v<0?'-':'')+fmtS(Math.abs(v))}},
+        y:{grid:{display:false},ticks:{font:{size:11},color:'#fff'}}
+      }
+    }
+  });
+
+  // Flow by region chart
+  const regionVar={};
+  fMoves.forEach(d=>{
+    regionVar[d.toRegion]=(regionVar[d.toRegion]||0)+d.amount;
+    regionVar[d.fromRegion]=(regionVar[d.fromRegion]||0)-d.amount;
+  });
+  const regionOrder=['NorAm','EMEA','APAC','ANZ + SG','LATAM/MEA'];
+  const rEntries=Object.entries(regionVar).filter(([,v])=>v!==0)
+    .sort((a,b)=>{const ai=regionOrder.findIndex(r=>a[0].includes(r.split('/')[0]));const bi=regionOrder.findIndex(r=>b[0].includes(r.split('/')[0]));return(ai<0?99:ai)-(bi<0?99:bi);});
+  dc('ch-flow-region');
+  charts['ch-flow-region']=new Chart(document.getElementById('ch-flow-region').getContext('2d'),{
+    type:'bar',
+    data:{labels:rEntries.map(([k])=>k),datasets:[{data:rEntries.map(([,v])=>v),backgroundColor:rEntries.map(([,v])=>v>=0?'rgba(255,199,0,0.2)':'rgba(226,75,74,0.15)'),borderColor:rEntries.map(([,v])=>v>=0?'#ffc700':'#E24B4A'),borderWidth:2,borderRadius:4}]},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(Math.abs(c.raw))+(c.raw>=0?' net in':' net out')}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#fff'}},
+        y:{grid:{color:'#222'},ticks:{font:{size:10},color:'#fff',callback:v=>(v<0?'-':'')+fmtS(Math.abs(v))}}
+      }
+    }
+  });
+
+  // Move log table
+  st('mv-tbl-cnt',fMoves.length.toLocaleString()+' moves');
+  document.getElementById('mv-tbody').innerHTML=fMoves.map(d=>`
+    <tr>
+      <td><strong>${esc(d.requestor)}</strong></td>
+      <td>${esc(d.fromMonth)}</td>
+      <td>${esc(d.toMonth)}</td>
+      <td>${esc(d.fromLine)}</td>
+      <td><span class="badge ${rb(d.fromRegion)}">${esc(d.fromRegion)}</span></td>
+      <td>${esc(d.toLine)}</td>
+      <td><span class="badge ${rb(d.toRegion)}">${esc(d.toRegion)}</span></td>
+      <td class="td-amt">${fmt(d.amount)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray2)" title="${esc(d.reason)}">${esc(d.reason)}</td>
+    </tr>
+  `).join('');
+}
+
+function parseMoves(rows){
+  if(!rows.length)return;
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,5);i++){
+    const r=rows[i].map(c=>String(c).toLowerCase());
+    if(r.some(c=>c.includes('requestor'))||r.some(c=>c.includes('from month'))){hi=i;break;}
+  }
+  const h=rows[hi].map(c=>String(c).toLowerCase().trim());
+  const cReq=h.findIndex(c=>c==='requestor');
+  const cFm=h.findIndex(c=>c==='from month');
+  const cTm=h.findIndex(c=>c==='to month');
+  const cFl=h.findIndex(c=>c.includes('from top-level')||c.includes('from budget'));
+  const cFr=h.findIndex(c=>c==='from region');
+  const cFt=h.findIndex(c=>c==='from team');
+  const cTl=h.findIndex(c=>c.includes('to top-level')||c.includes('to budget'));
+  const cTr=h.findIndex(c=>c==='to region');
+  const cTt=h.findIndex(c=>c==='to team');
+  const cAmt=h.findIndex(c=>c==='amount');
+  const cReason=h.findIndex(c=>c==='reason');
+  const cApproved=h.findIndex(c=>c.includes('approved'));
+  movesData=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];
+    const approved=String(r[cApproved]||'').toLowerCase();
+    if(approved!=='true'&&approved!=='1')continue;
+    const amt=parseFloat(String(r[cAmt]||'').replace(/[$,\s]/g,''));
+    if(!amt||isNaN(amt)||amt<=0)continue;
+    movesData.push({
+      requestor:cl(r[cReq]),fromMonth:cl(r[cFm]),toMonth:cl(r[cTm]),
+      fromLine:cl(r[cFl]),fromRegion:cl(r[cFr]),fromTeam:cl(r[cFt]),
+      toLine:cl(r[cTl]),toRegion:cl(r[cTr]),toTeam:cl(r[cTt]),
+      amount:amt,reason:cl(r[cReason])
+    });
+  }
+}
 function loadGIS(){
   const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
   s.onload=()=>{
@@ -336,7 +513,7 @@ function loadGIS(){
 async function fetchAll(){
   showLoad(true);hideErr();
   try{
-    const[eR,bR]=await Promise.all([fetchRange('Expenses!A:Z'),fetchRange('Planned_Budget!A:E')]);
+    const[eR,bR]=await Promise.all([fetchRange('Expenses!A:Z'),fetchRange('Planned_Budget!A:F')]);
     parseExp(eR.values||[]);parseBud(bR.values||[]);
     document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
     buildFilterOpts();FILTERS.forEach(f=>buildWidget(f));
@@ -377,15 +554,24 @@ function parseExp(rows){
 }
 
 function parseBud(rows){
-  if(!rows.length)return;let hi=0;
-  for(let i=0;i<Math.min(rows.length,5);i++){const r=rows[i].map(c=>String(c).toLowerCase());if(r.some(c=>c==='month')&&r.some(c=>c.includes('budget'))){hi=i;break;}}
+  if(!rows.length)return;
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const r=rows[i].map(c=>String(c).toLowerCase());
+    if(r.some(c=>c==='month')&&r.some(c=>c.includes('budget'))){hi=i;break;}
+  }
   const h=rows[hi].map(c=>String(c).toLowerCase().trim());
-  const cM=h.findIndex(c=>c==='month'),cL=h.findIndex(c=>c.includes('budget line')||c.includes('top-level'));
-  const cR=h.findIndex(c=>c==='region'),cT=h.findIndex(c=>c==='team'),cA=h.findIndex(c=>c.includes('planned budget'));
+  const cM=h.findIndex(c=>c==='month');
+  const cL=h.findIndex(c=>c.includes('top-level')||c.includes('budget line'));
+  const cR=h.findIndex(c=>c==='region');
+  const cT=h.findIndex(c=>c==='team');
+  const cE=h.findIndex(c=>c==='effective budget');
   budData=[];
   for(let i=hi+1;i<rows.length;i++){
-    const r=rows[i];const a=parseFloat(String(r[cA]||'').replace(/[$,\s]/g,''));
-    if(!a||isNaN(a)||a<=0)continue;const m=String(r[cM]||'').trim();if(!m)continue;
+    const r=rows[i];
+    const m=String(r[cM]||'').trim();if(!m)continue;
+    const a=parseFloat(String(r[cE]||'').replace(/[$,\s]/g,''));
+    if(!a||isNaN(a)||a<=0)continue;
     budData.push({month:m,budgetLine:cl(r[cL]),region:cl(r[cR]),team:cl(r[cT]),planned:a});
   }
 }
@@ -412,7 +598,8 @@ function applyFilters(){
   badge.textContent=n+' active';badge.style.display=n?'inline-block':'none';
   pg=1;
   if(activeTab==='actuals'){renderMetrics();renderCharts();renderTable();}
-  else renderBudget();
+  else if(activeTab==='budget')renderBudget();
+  else if(activeTab==='moves')renderMoves();
 }
 
 function renderMetrics(){
@@ -479,7 +666,7 @@ function renderBudget(){
   });
   const tPlan=fBud.reduce((s,d)=>s+d.planned,0),tAct=filtered.reduce((s,d)=>s+d.amount,0);
   const rem=tPlan-tAct,pct=tPlan>0?(tAct/tPlan*100):0;
-  st('bm-planned',fmt(tPlan));st('bm-actual',fmt(tAct));st('bm-actual-sub',pct.toFixed(1)+'% of planned budget');
+  st('bm-planned',fmt(tPlan));st('bm-actual',fmt(tAct));st('bm-actual-sub',pct.toFixed(1)+'% of effective budget');
   st('bm-remaining',rem>=0?fmt(rem):'-'+fmt(Math.abs(rem)));st('bm-remaining-sub',rem>=0?'still available':'over budget');
   st('bm-pct',pct.toFixed(1)+'%');st('bm-pct-sub',pct>100?'Over budget':pct>80?'Approaching limit':'On track');
   document.getElementById('bm-remaining').style.color=rem>=0?(pct>80?'var(--warn)':'var(--accent)'):'var(--danger)';
@@ -492,7 +679,7 @@ function renderBVAMonthly(fBud){
   fBud.forEach(d=>{const m=MONTHS.find(mo=>d.month.toLowerCase().startsWith(mo.toLowerCase()));if(m)bMP[m]+=d.planned;});
   filtered.forEach(d=>{const m=MONTHS.find(mo=>d.month.toLowerCase().startsWith(mo.toLowerCase()));if(m)bMA[m]+=d.amount;});
   const labels=MONTHS.filter(m=>bMP[m]>0||bMA[m]>0);dc('ch-bva-monthly');
-  charts['ch-bva-monthly']=new Chart(document.getElementById('ch-bva-monthly').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'Planned',data:labels.map(m=>bMP[m]),backgroundColor:'rgba(37,99,235,0.15)',borderColor:'#2563eb',borderWidth:2,borderRadius:4},{label:'Actual',data:labels.map(m=>bMA[m]),backgroundColor:'rgba(255,199,0,0.2)',borderColor:'#ffc700',borderWidth:2,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:12}},tooltip:{callbacks:{label:function(c){if(c.dataset.label==='Actual'){var p=bMP[c.label]||0;var pct=p>0?(c.raw/p*100).toFixed(1)+'%':'n/a';return ' '+c.dataset.label+': '+fmt(c.raw)+' ('+pct+' used)';}return ' '+c.dataset.label+': '+fmt(c.raw);}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#fff',maxRotation:45}},y:{grid:{color:'#222'},ticks:{font:{size:11},color:'#fff',callback:v=>fmtS(v)}}}}}});
+  charts['ch-bva-monthly']=new Chart(document.getElementById('ch-bva-monthly').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'Planned',data:labels.map(m=>bMP[m]),backgroundColor:'rgba(37,99,235,0.15)',borderColor:'#2563eb',borderWidth:2,borderRadius:4},{label:'Actual',data:labels.map(m=>bMA[m]),backgroundColor:'rgba(255,199,0,0.2)',borderColor:'#ffc700',borderWidth:2,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:12}},tooltip:{callbacks:{label:function(c){if(c.dataset.label==='Actual'){var p=bMP[c.label]||0;var pct=p>0?(c.raw/p*100).toFixed(1)+'%':'n/a';return ' '+c.dataset.label+': '+fmt(c.raw)+' ('+pct+' used)';}return ' '+c.dataset.label+': '+fmt(c.raw);}}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#fff',maxRotation:45}},y:{grid:{color:'#222'},ticks:{font:{size:11},color:'#fff',callback:v=>fmtS(v)}}}}});
 }
 function renderBVARegion(fBud){
   const regionOrder=['NorAm','EMEA','APAC','ANZ + SG','LATAM/MEA'];
