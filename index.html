@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keeper Marketing Ops</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh}
+header{background:#000;border-bottom:1px solid #222;padding:0 48px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr-logo{width:36px;height:36px;border-radius:8px;overflow:hidden}
+.hdr-logo img{width:100%;height:100%;display:block}
+.hdr-title{font-size:16px;font-weight:600;letter-spacing:-.2px}
+.hdr-sub{font-size:12px;color:#555;margin-top:2px}
+.hdr-badge{font-size:11px;color:#ffc700;background:rgba(255,199,0,.1);border:1px solid rgba(255,199,0,.2);padding:3px 10px;border-radius:10px;font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:64px 48px}
+.hero{margin-bottom:56px}
+.hero h1{font-size:36px;font-weight:700;letter-spacing:-.5px;margin-bottom:12px;line-height:1.2}
+.hero h1 span{color:#ffc700}
+.hero p{font-size:16px;color:#888;max-width:520px;line-height:1.6}
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#444;margin-bottom:20px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:48px}
+.dash-card{background:#111;border:1px solid #222;border-radius:14px;padding:28px;text-decoration:none;color:inherit;transition:all .2s;position:relative;overflow:hidden;display:block}
+.dash-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;transition:opacity .2s}
+.dash-card.gold::before{background:linear-gradient(90deg,#ffc700,#ffaa00)}
+.dash-card.blue::before{background:linear-gradient(90deg,#378ADD,#2563eb)}
+.dash-card.purple::before{background:linear-gradient(90deg,#7F77DD,#6d28d9)}
+.dash-card.teal::before{background:linear-gradient(90deg,#1D9E75,#0d7a56)}
+.dash-card.coming::before{background:linear-gradient(90deg,#333,#444)}
+.dash-card:hover{border-color:#333;background:#151515;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.dash-card.coming{opacity:.5;cursor:default;pointer-events:none}
+.dash-card.coming:hover{transform:none;box-shadow:none}
+.card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:20px}
+.card-icon.gold{background:rgba(255,199,0,.12)}
+.card-icon.blue{background:rgba(55,138,221,.12)}
+.card-icon.purple{background:rgba(127,119,221,.12)}
+.card-icon.teal{background:rgba(29,158,117,.12)}
+.card-icon.gray{background:#1a1a1a}
+.card-title{font-size:15px;font-weight:600;margin-bottom:6px;letter-spacing:-.1px}
+.card-desc{font-size:13px;color:#666;line-height:1.5;margin-bottom:18px}
+.card-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;color:#555;background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 8px;border-radius:6px}
+.card-arrow{position:absolute;bottom:24px;right:24px;color:#333;font-size:18px;transition:all .2s}
+.dash-card:hover .card-arrow{color:#ffc700;transform:translateX(3px)}
+.coming-tag{position:absolute;top:16px;right:16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#444;background:#1a1a1a;padding:3px 8px;border-radius:6px}
+footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto}
+.footer-text{font-size:12px;color:#333}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){main,header,footer{padding-left:20px;padding-right:20px}.dashboard-grid{grid-template-columns:1fr}.hero h1{font-size:28px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-left">
+    <div class="hdr-logo"><img src="favicon.png" alt="Keeper"></div>
+    <div>
+      <div class="hdr-title">Marketing Ops</div>
+      <div class="hdr-sub">Keeper Security</div>
+    </div>
+  </div>
+  <div class="hdr-badge">Internal</div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Marketing Dashboards Hub</h1>
+  </div>
+
+  <div class="section-label">Available now</div>
+  <div class="dashboard-grid">
+
+    <a href="budget-dashboard.html" class="dash-card gold">
+      <div class="card-icon gold">💰</div>
+      <div class="card-title">Marketing budget</div>
+      <div class="card-desc">Track actuals vs effective budget, budget moves, regional spend and variance across all teams.</div>
+      <div class="card-tags">
+        <span class="tag">Budget vs actual</span>
+        <span class="tag">Actuals</span>
+        <span class="tag">Budget moves</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="channel-dashboard.html" class="dash-card blue">
+      <div class="card-icon blue">🤝</div>
+      <div class="card-title">Channel marketing</div>
+      <div class="card-desc">Partner activity spend by CAM, partner type and segment. Route to market spend breakdown.</div>
+      <div class="card-tags">
+        <span class="tag">Partner spend</span>
+        <span class="tag">Route to market</span>
+        <span class="tag">CAM view</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <div class="dash-card coming">
+      <span class="coming-tag">Coming soon</span>
+      <div class="card-icon gray">📈</div>
+      <div class="card-title">Demand generation</div>
+      <div class="card-desc">MQL performance, pipeline contribution and campaign ROI across regions and segments.</div>
+      <div class="card-tags">
+        <span class="tag">MQLs</span>
+        <span class="tag">Pipeline</span>
+        <span class="tag">Campaigns</span>
+      </div>
+    </div>
+
+    <div class="dash-card coming">
+      <span class="coming-tag">Coming soon</span>
+      <div class="card-icon gray">🎪</div>
+      <div class="card-title">Events</div>
+      <div class="card-desc">Event pipeline, attendance, spend and ROI tracking across field and sponsored events.</div>
+      <div class="card-tags">
+        <span class="tag">Spend</span>
+        <span class="tag">Attendance</span>
+        <span class="tag">ROI</span>
+      </div>
+    </div>
+
+    <div class="dash-card coming">
+      <span class="coming-tag">Coming soon</span>
+      <div class="card-icon gray">🔍</div>
+      <div class="card-title">SEO & organic</div>
+      <div class="card-desc">Organic traffic, keyword rankings, and conversion performance by product and region.</div>
+      <div class="card-tags">
+        <span class="tag">Traffic</span>
+        <span class="tag">Rankings</span>
+        <span class="tag">Conversions</span>
+      </div>
+    </div>
+
+    <div class="dash-card coming">
+      <span class="coming-tag">Coming soon</span>
+      <div class="card-icon gray">🏎️</div>
+      <div class="card-title">F1 sponsorship</div>
+      <div class="card-desc">Williams Racing sponsorship ROI, hospitality tracking and brand exposure metrics.</div>
+      <div class="card-tags">
+        <span class="tag">Hospitality</span>
+        <span class="tag">Brand</span>
+        <span class="tag">ROI</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-text">Keeper Security · Marketing Ops · Internal use only</div>
+  <div class="footer-text" id="footer-date"></div>
+</footer>
+<script>
+document.getElementById('footer-date').textContent = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+</script>
+</body>
+</html>
