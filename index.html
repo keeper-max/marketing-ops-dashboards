@@ -29,6 +29,8 @@ main{max-width:1100px;margin:0 auto;padding:64px 48px}
 .dash-card.purple::before{background:linear-gradient(90deg,#7F77DD,#6d28d9)}
 .dash-card.teal::before{background:linear-gradient(90deg,#1D9E75,#0d7a56)}
 .dash-card.coming::before{background:linear-gradient(90deg,#333,#444)}
+    .dash-card.purple::before{background:linear-gradient(90deg,#7F77DD,#6d28d9)}
+    .card-icon.purple{background:rgba(127,119,221,.12)}
 .dash-card:hover{border-color:#333;background:#151515;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .dash-card.coming{opacity:.5;cursor:default;pointer-events:none}
 .dash-card.coming:hover{transform:none;box-shadow:none}
@@ -73,7 +75,7 @@ footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:c
 
     <a href="budget-dashboard.html" class="dash-card gold">
       <div class="card-icon gold">💰</div>
-      <div class="card-title">Marketing budget</div>
+      <div class="card-title">Marketing Budget</div>
       <div class="card-desc">Track actuals vs effective budget, budget moves, regional spend and variance across all teams.</div>
       <div class="card-tags">
         <span class="tag">Budget vs actual</span>
@@ -85,7 +87,7 @@ footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:c
 
     <a href="channel-dashboard.html" class="dash-card blue">
       <div class="card-icon blue">🤝</div>
-      <div class="card-title">Channel marketing</div>
+      <div class="card-title">Channel Marketing</div>
       <div class="card-desc">Partner activity spend by CAM, partner type and segment. Route to market spend breakdown.</div>
       <div class="card-tags">
         <span class="tag">Partner spend</span>
@@ -95,17 +97,17 @@ footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:c
       <div class="card-arrow">→</div>
     </a>
 
-    <div class="dash-card coming">
-      <span class="coming-tag">Coming soon</span>
-      <div class="card-icon gray">📈</div>
-      <div class="card-title">Demand generation</div>
-      <div class="card-desc">MQL performance, pipeline contribution and campaign ROI across regions and segments.</div>
+    <a href="ppc-dashboard.html" class="dash-card purple">
+      <div class="card-icon purple">📊</div>
+      <div class="card-title">PPC Pacing</div>
+      <div class="card-desc">Real-time spend pacing, EOM projections and historical performance across NAM, EMEA, Japan and B2C markets.</div>
       <div class="card-tags">
-        <span class="tag">MQLs</span>
-        <span class="tag">Pipeline</span>
-        <span class="tag">Campaigns</span>
+        <span class="tag">Pacing</span>
+        <span class="tag">EOM projection</span>
+        <span class="tag">Historical</span>
       </div>
-    </div>
+      <div class="card-arrow">→</div>
+    </a>
 
     <div class="dash-card coming">
       <span class="coming-tag">Coming soon</span>
@@ -122,7 +124,7 @@ footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:c
     <div class="dash-card coming">
       <span class="coming-tag">Coming soon</span>
       <div class="card-icon gray">🔍</div>
-      <div class="card-title">SEO & organic</div>
+      <div class="card-title">SEO & Organic</div>
       <div class="card-desc">Organic traffic, keyword rankings, and conversion performance by product and region.</div>
       <div class="card-tags">
         <span class="tag">Traffic</span>
@@ -134,7 +136,7 @@ footer{border-top:1px solid #1a1a1a;padding:24px 48px;display:flex;align-items:c
     <div class="dash-card coming">
       <span class="coming-tag">Coming soon</span>
       <div class="card-icon gray">🏎️</div>
-      <div class="card-title">F1 sponsorship</div>
+      <div class="card-title">F1 Sponsorship</div>
       <div class="card-desc">Williams Racing sponsorship ROI, hospitality tracking and brand exposure metrics.</div>
       <div class="card-tags">
         <span class="tag">Hospitality</span>
