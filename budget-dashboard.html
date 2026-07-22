@@ -150,56 +150,6 @@ tbody td{padding:9px 14px;vertical-align:middle;color:#fff}
 .pct-warn{background:var(--orange-dim);color:var(--orange)}
 .pct-over{background:var(--danger-dim);color:var(--danger)}
 .error-bar{display:none;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--danger)}.error-bar.show{display:block}
-
-[data-theme="light"]{
-  --bg:#f5f5f3;--bg1:#ffffff;--bg2:#f0f0ee;--bg3:#e8e8e5;
-  --border:#e0dfd9;--border2:#d0cfc9;
-  --gold:#d4a000;--gold-dim:rgba(212,160,0,.1);--gold-text:#a07800;
-  --white:#111111;--gray:#444;--gray2:#333;--gray3:#666;
-  --blue:#1a5fb4;--blue-dim:rgba(26,95,180,.12);
-  --purple:#5c35c8;--purple-dim:rgba(92,53,200,.12);
-  --teal:#0d7a56;--teal-dim:rgba(13,122,86,.12);
-  --orange:#b85c00;--orange-dim:rgba(184,92,0,.12);
-  --danger:#c0392b;--danger-dim:rgba(192,57,43,.12);
-}
-[data-theme="light"] header{background:#1a1a1a}
-[data-theme="light"] .tab-nav,[data-theme="light"] .filter-bar{background:#ffffff;border-color:#e0dfd9}
-[data-theme="light"] .tab-btn{color:#666}
-[data-theme="light"] .tab-btn.active{color:var(--gold)}
-[data-theme="light"] .ms-btn{background:#fff;color:#333;border-color:#d0cfc9}
-[data-theme="light"] .ms-btn.has-sel{background:var(--gold-dim)}
-[data-theme="light"] .ms-dd{background:#fff;border-color:#d0cfc9;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-[data-theme="light"] .ms-si{background:#f5f5f3;color:#333;border-color:#d0cfc9}
-[data-theme="light"] .ms-opt{color:#333}
-[data-theme="light"] .ms-opt:hover{background:#f0f0ee}
-[data-theme="light"] .ms-opt.sel{background:var(--gold-dim);color:var(--gold-text)}
-[data-theme="light"] .ms-chk{border-color:#c0bfb9}
-[data-theme="light"] .filter-search{background:#fff;color:#333;border-color:#d0cfc9}
-[data-theme="light"] .filter-search::placeholder{color:#aaa}
-[data-theme="light"] .metric,.bmetric,.chart-card,.table-card{background:#fff;border-color:#e0dfd9}
-[data-theme="light"] .metric-lbl,.bm-label,.chart-sub{color:#888}
-[data-theme="light"] .metric-val,.bm-val{color:#111}
-[data-theme="light"] .metric-sub,.bm-sub{color:#666}
-[data-theme="light"] thead th{background:#f5f5f3;color:#888;border-color:#e0dfd9}
-[data-theme="light"] tbody tr{border-color:#e8e8e5}
-[data-theme="light"] tbody tr:hover{background:#f5f5f3}
-[data-theme="light"] tbody td{color:#333}
-[data-theme="light"] .td-amt{color:#111}
-[data-theme="light"] .table-hdr{border-color:#e0dfd9}
-[data-theme="light"] .table-cnt{background:#f0f0ee;color:#666}
-[data-theme="light"] .pagination{border-color:#e0dfd9;color:#888}
-[data-theme="light"] .pbt{background:#fff;border-color:#d0cfc9;color:#666}
-[data-theme="light"] .owner-av{background:var(--gold-dim)}
-[data-theme="light"] .owner-name{color:#333}
-[data-theme="light"] .owner-amt{color:#111}
-[data-theme="light"] .owner-bar-wrap{background:#e8e8e5}
-[data-theme="light"] .bm-bar-wrap{background:#e8e8e5}
-[data-theme="light"] .error-bar{background:#fdeaea;border-color:#fca5a5}
-[data-theme="light"] main{background:#f5f5f3}
-[data-theme="light"] #app{background:#f5f5f3}
-[data-theme="light"] .auth-card{background:#fff;border-color:#e0dfd9}
-[data-theme="light"] .sign-in-btn{background:#fff;border-color:#d0cfc9;color:#333}
-[data-theme="light"] #auth-screen{background:#f0f0ee}
 @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,1fr)}.budget-metrics{grid-template-columns:repeat(2,1fr)}.charts-2{grid-template-columns:1fr}.charts-3{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){main,header,.filter-bar,.tab-nav{padding-left:16px;padding-right:16px}.metrics{grid-template-columns:repeat(2,1fr)}.budget-metrics{grid-template-columns:1fr 1fr}.charts-3{grid-template-columns:1fr}}
 </style>
@@ -222,7 +172,6 @@ tbody td{padding:9px 14px;vertical-align:middle;color:#fff}
     </div>
     <div class="hdr-right">
       <button class="refresh-btn" id="refresh-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refresh</button>
-      <button class="refresh-btn" id="theme-toggle" title="Toggle light/dark mode" style="font-size:16px;padding:4px 8px;min-width:32px;justify-content:center">🌙</button>
       <div class="user-pill"><div class="user-av" id="user-av">-</div><span id="user-name">-</span></div>
       <button class="signout-btn" id="signout-btn">Sign out</button>
     </div>
@@ -541,58 +490,22 @@ function parseMoves(rows){
     });
   }
 }
-
-function applyTheme(theme){
-  document.documentElement.setAttribute('data-theme',theme);
-  document.getElementById('theme-toggle').textContent=theme==='light'?'🌙':'☀️';
-  localStorage.setItem('keeper-theme',theme);
-}
-function initTheme(){
-  const saved=localStorage.getItem('keeper-theme')||'dark';
-  applyTheme(saved);
-}
-document.getElementById('theme-toggle').addEventListener('click',()=>{
-  const current=document.documentElement.getAttribute('data-theme')||'dark';
-  applyTheme(current==='dark'?'light':'dark');
-});
-initTheme();
 function loadGIS(){
   const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
   s.onload=()=>{
     const tc=google.accounts.oauth2.initTokenClient({
       client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/spreadsheets.readonly',
       callback:r=>{
-        if(r.error){if(r.error!=='interaction_required'&&r.error!=='access_denied')showErr('Sign-in failed: '+r.error);return;}
+        if(r.error){showErr('Sign-in failed: '+r.error);return;}
         token=r.access_token;
         fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+token}})
-          .then(r=>r.json()).then(u=>{
-            const initials=((u.given_name||'?')[0]+(u.family_name||'?')[0]).toUpperCase();
-            const name=u.name||u.email||'';
-            document.getElementById('user-av').textContent=initials;
-            document.getElementById('user-name').textContent=name;
-            sessionStorage.setItem('guserInitials',initials);
-            sessionStorage.setItem('guser',name);
-          }).catch(()=>{});
-        sessionStorage.setItem('gtoken', r.access_token);
+          .then(r=>r.json()).then(u=>{document.getElementById('user-av').textContent=((u.given_name||'?')[0]+(u.family_name||'?')[0]).toUpperCase();document.getElementById('user-name').textContent=u.name||u.email||'';}).catch(()=>{});
         document.getElementById('auth-screen').style.display='none';
         document.getElementById('app').style.display='flex';
         fetchAll();
       }
     });
-    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:''}));
-    // Try silent sign-in if previously authorized
-    const saved=sessionStorage.getItem('gtoken');
-    const savedName=sessionStorage.getItem('guser');
-    const savedInitials=sessionStorage.getItem('guserInitials');
-    if(saved){
-      token=saved;
-      if(savedInitials)document.getElementById('user-av').textContent=savedInitials;
-      if(savedName)document.getElementById('user-name').textContent=savedName;
-      document.getElementById('auth-screen').style.display='none';
-      document.getElementById('app').style.display='flex';
-      fetchAll();
-    }
-    else{tc.requestAccessToken({prompt:'none',error_callback:()=>{}});} 
+    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:'consent'}));
   };
   document.head.appendChild(s);
 }
@@ -810,7 +723,7 @@ const pgr=(cur,tot)=>{if(tot<=7)return Array.from({length:tot},(_,i)=>i+1);if(cu
 document.getElementById('f-search').addEventListener('input',applyFilters);
 document.getElementById('clear-btn').addEventListener('click',()=>{FILTERS.forEach(f=>{f.selected.clear();f._q='';if(f._btn)updBtn(f);if(f._list)renderOpts(f);});document.getElementById('f-search').value='';applyFilters();});
 document.getElementById('refresh-btn').addEventListener('click',()=>{const b=document.getElementById('refresh-btn');b.classList.add('spinning');fetchAll().finally(()=>b.classList.remove('spinning'));});
-document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});sessionStorage.removeItem('gtoken');sessionStorage.removeItem('guser');sessionStorage.removeItem('guserInitials');token=null;expData=[];budData=[];filtered=[];document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
+document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;expData=[];budData=[];filtered=[];document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
 document.querySelectorAll('thead th[data-col]').forEach(th=>{th.addEventListener('click',()=>{if(sCol===th.dataset.col)sDir*=-1;else{sCol=th.dataset.col;sDir=1;}pg=1;renderTable();});});
 
 function exportCSV(){
