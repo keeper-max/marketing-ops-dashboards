@@ -393,7 +393,7 @@ function renderPacing(){
   // Days elapsed: if current month use today, else use full month
   let daysElapsed, yesterday;
   if(isCurrentMonth){
-    daysElapsed=now.getDate()-1; // completed days (exclude today, data through yesterday)
+    daysElapsed=now.getDate(); // include today since sheet has today's data
     yesterday=new Date(now);yesterday.setDate(now.getDate()-1);
   } else {
     daysElapsed=daysInMonth;
