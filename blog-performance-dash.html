@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keeper Blog Performance</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--bg1:#111;--bg2:#161616;--bg3:#1c1c1c;--border:#222;--border2:#2a2a2a;--gold:#ffc700;--gold-dim:rgba(255,199,0,.12);--white:#fff;--gray:#ccc;--gray3:#999;--blue:#378ADD;--blue-dim:rgba(55,138,221,.15);--purple:#7F77DD;--purple-dim:rgba(127,119,221,.15);--teal:#1D9E75;--teal-dim:rgba(29,158,117,.15);--orange:#E8820A;--orange-dim:rgba(232,130,10,.15);--danger:#E24B4A;--danger-dim:rgba(226,75,74,.15);--r:8px;--rsm:4px;--rlg:12px;--slg:0 12px 32px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--white);min-height:100vh;font-size:14px;line-height:1.5}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#000}
+.auth-card{background:var(--bg1);border-radius:16px;padding:48px;max-width:420px;width:100%;text-align:center;border:1px solid var(--border2);box-shadow:var(--slg)}
+.auth-card h1{font-size:22px;font-weight:700;margin-bottom:8px}
+.auth-card p{color:var(--gray);font-size:14px;margin-bottom:32px;line-height:1.6}
+.sign-in-btn{display:inline-flex;align-items:center;gap:10px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;color:var(--white)}
+.sign-in-btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.sign-in-btn img{width:18px;height:18px}
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,199,0,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+.loading-txt{color:var(--gray);font-size:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#app{display:none;flex-direction:column;min-height:100vh}
+header{background:#000;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border)}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-logo{width:30px;height:30px;border-radius:6px;overflow:hidden}
+header h1{font-size:14px;font-weight:600}
+.hdr-meta{font-size:11px;color:var(--gray3);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:var(--rsm);color:var(--gray);font-size:12px;padding:6px 10px;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none}
+.hdr-btn:hover{border-color:var(--gold);color:var(--gold)}
+.hdr-btn.spinning svg{animation:spin .8s linear infinite}
+.signout-btn{background:none;border:none;color:var(--gray3);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:var(--rsm);font-family:inherit;transition:color .15s}
+.signout-btn:hover{color:var(--white)}
+.tab-nav{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 32px;display:flex}
+.tab-btn{height:44px;padding:0 18px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--gray);cursor:pointer;font-family:inherit;transition:all .15s;margin-bottom:-1px}
+.tab-btn:hover{color:var(--white)}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.controls{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 32px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl-input{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--rsm);font-size:13px;font-family:inherit;color:var(--white);background:var(--bg2);outline:none;transition:border-color .15s;width:300px}
+.ctrl-input:focus{border-color:var(--gold)}
+.ctrl-input::placeholder{color:var(--gray3)}
+.ctrl-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3)}
+main{padding:24px 32px;flex:1;max-width:1440px;width:100%;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric{background:var(--bg1);border-radius:var(--rlg);padding:16px 18px;border:1px solid var(--border);position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.metric.c-gold::before{background:var(--gold)}
+.metric.c-blue::before{background:var(--blue)}
+.metric.c-purple::before{background:var(--purple)}
+.metric.c-teal::before{background:var(--teal)}
+.metric-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray3);margin-bottom:8px}
+.metric-val{font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1;margin-bottom:4px}
+.metric.c-gold .metric-val{color:var(--gold)}
+.metric.c-blue .metric-val{color:var(--blue)}
+.metric.c-purple .metric-val{color:var(--purple)}
+.metric.c-teal .metric-val{color:var(--teal)}
+.metric-sub{font-size:12px;color:var(--gray)}
+.charts-2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
+.charts-equal{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:var(--bg1);border-radius:var(--rlg);padding:18px 20px;border:1px solid var(--border)}
+.chart-hdr{margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:600;color:var(--white)}
+.chart-sub{font-size:11px;color:var(--gray);margin-top:1px}
+canvas{max-height:240px}
+.table-card{background:var(--bg1);border-radius:var(--rlg);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:600}
+.table-cnt{font-size:11px;color:var(--gray);background:var(--bg2);padding:3px 8px;border-radius:10px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:9px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--gray3);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--white)}
+thead th.sorted{color:var(--gold)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+tbody td{padding:9px 14px;vertical-align:middle;color:var(--white)}
+.td-r{text-align:right;font-variant-numeric:tabular-nums}
+.td-url{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray);font-size:12px}
+.td-url a{color:var(--blue);text-decoration:none}
+.td-url a:hover{text-decoration:underline}
+.trend-up{color:var(--teal);font-weight:600}
+.trend-down{color:var(--danger);font-weight:600}
+.trend-flat{color:var(--gray3)}
+.sparkline-cell{width:80px}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--gray)}
+.pag-btns{display:flex;gap:3px}
+.pbt{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg2);cursor:pointer;font-size:12px;color:var(--gray);transition:all .1s;font-family:inherit}
+.pbt:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.pbt.active{background:var(--gold);color:#000;border-color:var(--gold)}
+.pbt:disabled{opacity:.3;cursor:default}
+.mover-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:700}
+.mb-up{background:var(--teal-dim);color:var(--teal)}
+.mb-down{background:var(--danger-dim);color:var(--danger)}
+.blog-detail-panel{background:var(--bg1);border-radius:var(--rlg);border:1px solid var(--border);padding:20px;margin-bottom:20px;display:none}
+.blog-detail-panel.show{display:block}
+.bdp-url{font-size:12px;color:var(--blue);margin-bottom:14px;word-break:break-all}
+.bdp-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.bdp-metric{background:var(--bg2);border-radius:var(--r);padding:12px 14px}
+.bdp-metric-lbl{font-size:10px;color:var(--gray3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.bdp-metric-val{font-size:20px;font-weight:700}
+.close-detail{float:right;background:none;border:none;color:var(--gray3);cursor:pointer;font-size:18px;font-family:inherit;line-height:1}
+.close-detail:hover{color:var(--white)}
+.error-bar{display:none;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--danger)}.error-bar.show{display:block}
+@media(max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}.charts-2,.charts-equal{grid-template-columns:1fr}}
+@media(max-width:700px){main,header,.controls,.tab-nav{padding-left:16px;padding-right:16px}.metrics{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="auth-screen">
+  <div class="auth-card">
+    <img src="favicon.png" style="width:52px;height:52px;border-radius:50%;margin-bottom:24px">
+    <h1>Blog Performance</h1>
+    <p>Sign in with your Keeper Google Workspace account.</p>
+    <button class="sign-in-btn" id="sign-in-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google</button>
+  </div>
+</div>
+<div id="loading"><div class="spinner"></div><div class="loading-txt">Loading blog data...</div></div>
+<div id="app">
+  <header>
+    <div class="hdr-left">
+      <div class="hdr-logo"><img src="favicon.png" style="width:30px;height:30px;border-radius:6px;display:block"></div>
+      <div><h1>Blog Performance</h1><div class="hdr-meta" id="last-updated">-</div></div>
+      <a href="index.html" class="hdr-btn" style="margin-left:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>All dashboards</a>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn" id="refresh-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refresh</button>
+      <button class="signout-btn" id="signout-btn">Sign out</button>
+    </div>
+  </header>
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="blogs">Blog detail</button>
+    <button class="tab-btn" data-tab="trends">Gainers &amp; losers</button>
+  </div>
+  <div class="controls" id="blog-search-bar" style="display:none">
+    <span class="ctrl-label">Search</span>
+    <input type="text" class="ctrl-input" id="blog-search" placeholder="Filter by URL or keyword (e.g. password, vpn, phishing)...">
+    <span style="font-size:12px;color:var(--gray3)" id="blog-search-count"></span>
+  </div>
+  <main>
+    <div class="error-bar" id="error-bar"></div>
+
+    <!-- OVERVIEW TAB -->
+    <div class="section active" id="section-overview">
+      <div class="metrics">
+        <div class="metric c-gold"><div class="metric-lbl">Total impressions (30d)</div><div class="metric-val" id="m-imp">-</div><div class="metric-sub" id="m-imp-sub">-</div></div>
+        <div class="metric c-blue"><div class="metric-lbl">Total clicks (30d)</div><div class="metric-val" id="m-clicks">-</div><div class="metric-sub" id="m-clicks-sub">-</div></div>
+        <div class="metric c-purple"><div class="metric-lbl">Avg CTR</div><div class="metric-val" id="m-ctr">-</div><div class="metric-sub" id="m-ctr-sub">-</div></div>
+        <div class="metric c-teal"><div class="metric-lbl">Avg position</div><div class="metric-val" id="m-pos">-</div><div class="metric-sub" id="m-pos-sub">-</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Daily impressions &amp; clicks</div><div class="chart-sub">Total across all blogs — rolling 30 days</div></div>
+          <canvas id="ch-daily"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Top 10 blogs by impressions</div><div class="chart-sub">30-day total impressions</div></div>
+          <canvas id="ch-top10"></canvas>
+        </div>
+      </div>
+      <div class="charts-equal">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Top 10 by clicks</div><div class="chart-sub">30-day total clicks</div></div>
+          <canvas id="ch-top-clicks"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Avg position distribution</div><div class="chart-sub">Blogs by position bucket</div></div>
+          <canvas id="ch-pos-dist"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOG DETAIL TAB -->
+    <div class="section" id="section-blogs">
+      <div class="blog-detail-panel" id="detail-panel">
+        <button class="close-detail" id="close-detail">×</button>
+        <div class="bdp-url" id="detail-url"></div>
+        <div class="bdp-metrics">
+          <div class="bdp-metric"><div class="bdp-metric-lbl">Impressions (30d)</div><div class="bdp-metric-val" style="color:var(--gold)" id="d-imp">-</div></div>
+          <div class="bdp-metric"><div class="bdp-metric-lbl">Clicks (30d)</div><div class="bdp-metric-val" style="color:var(--blue)" id="d-clicks">-</div></div>
+          <div class="bdp-metric"><div class="bdp-metric-lbl">Avg CTR</div><div class="bdp-metric-val" style="color:var(--purple)" id="d-ctr">-</div></div>
+          <div class="bdp-metric"><div class="bdp-metric-lbl">Avg position</div><div class="bdp-metric-val" style="color:var(--teal)" id="d-pos">-</div></div>
+        </div>
+        <canvas id="ch-detail" style="max-height:200px"></canvas>
+      </div>
+      <div class="table-card">
+        <div class="table-hdr"><div class="table-title">All blogs</div><span class="table-cnt" id="blogs-cnt">-</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th data-col="url">Blog post</th>
+              <th data-col="imp" class="td-r sorted">Impressions</th>
+              <th data-col="clicks" class="td-r">Clicks</th>
+              <th data-col="ctr" class="td-r">CTR</th>
+              <th data-col="pos" class="td-r">Avg position</th>
+              <th data-col="trend" class="td-r">30d trend</th>
+            </tr></thead>
+            <tbody id="blogs-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="b-pag-info">-</span><div class="pag-btns" id="b-pag-btns"></div></div>
+      </div>
+    </div>
+
+    <!-- TRENDS TAB -->
+    <div class="section" id="section-trends">
+      <div class="charts-equal" style="margin-bottom:20px">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Biggest impression gainers</div><div class="chart-sub">First 15 days vs last 15 days</div></div>
+          <canvas id="ch-gainers"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Biggest impression losers</div><div class="chart-sub">First 15 days vs last 15 days</div></div>
+          <canvas id="ch-losers"></canvas>
+        </div>
+      </div>
+      <div class="charts-equal">
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Position improvers</div><div class="chart-sub">Blogs moving up in rankings</div></div>
+          <canvas id="ch-pos-up"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-hdr"><div class="chart-title">Position decliners</div><div class="chart-sub">Blogs dropping in rankings</div></div>
+          <canvas id="ch-pos-down"></canvas>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-hdr"><div class="table-title">Top movers — impressions (first 15 vs last 15 days)</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Blog post</th>
+              <th class="td-r">First 15 days</th>
+              <th class="td-r">Last 15 days</th>
+              <th class="td-r">Change</th>
+              <th class="td-r">% change</th>
+            </tr></thead>
+            <tbody id="movers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const CLIENT_ID='396787219533-38oqi64vqis5pj6iaa7s3r15n2h35dok.apps.googleusercontent.com';
+const SHEET_ID='1VAIH0d7S6_iFAFHR6BV_fDUj_yIZEBc-v_mKCUZZnWM';
+
+let impData={}, clicksData={}, ctrData={}, posData={};
+let dates=[], blogs=[], allBlogStats=[], filteredBlogs=[];
+let charts={}, token=null, activeTab='overview';
+let bSortCol='imp', bSortDir=-1, bPg=1;
+const PER=50;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function loadGIS(){
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+  s.onload=()=>{
+    const tc=google.accounts.oauth2.initTokenClient({
+      client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/spreadsheets.readonly',
+      callback:r=>{
+        if(r.error){showErr('Sign-in failed: '+r.error);return;}
+        token=r.access_token;sessionStorage.setItem('gtoken',token);
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('app').style.display='flex';
+        fetchAll();
+      }
+    });
+    document.getElementById('sign-in-btn').addEventListener('click',()=>tc.requestAccessToken({prompt:''}));
+    const saved=sessionStorage.getItem('gtoken');
+    if(saved){token=saved;document.getElementById('auth-screen').style.display='none';document.getElementById('app').style.display='flex';fetchAll();}
+  };
+  document.head.appendChild(s);
+}
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function fetchAll(){
+  showLoad(true);hideErr();
+  try{
+    const[iR,cR,tR,pR]=await Promise.all([
+      fetchRange('Impressions!A:AF'),
+      fetchRange('Clicks!A:AF'),
+      fetchRange('CTR!A:AF'),
+      fetchRange('Avg Position!A:AF')
+    ]);
+    parseSheet(iR.values||[], 'imp');
+    parseSheet(cR.values||[], 'clicks');
+    parseSheet(tR.values||[], 'ctr');
+    parseSheet(pR.values||[], 'pos');
+    buildBlogStats();
+    document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
+    render();
+  }catch(e){showErr('Could not load data: '+e.message);}
+  showLoad(false);
+}
+
+async function fetchRange(range){
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent(range);
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok){
+    if(r.status===401){sessionStorage.removeItem('gtoken');token=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';throw new Error('Session expired.');}
+    const e=await r.json();throw new Error(e.error?.message||r.statusText);
+  }
+  return r.json();
+}
+
+// ── PARSE ─────────────────────────────────────────────────────────────────────
+function parseSheet(rows, key){
+  if(!rows.length)return;
+  // Row 0: headers — first col is "Landing page", rest are dates, last is "Trendline"
+  const headers=rows[0];
+  const dateCols=[];
+  headers.forEach((h,i)=>{
+    if(i===0||String(h).toLowerCase()==='trendline')return;
+    dateCols.push({idx:i,label:String(h)});
+  });
+  if(key==='imp') dates=dateCols.map(d=>d.label);
+
+  const result={};
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const url=String(r[0]||'').trim();
+    if(!url||!url.includes('keepersecurity.com'))continue;
+    const vals=dateCols.map(d=>{
+      const v=r[d.idx];
+      const n=parseFloat(String(v||'').replace(/[^0-9.-]/g,''));
+      return isNaN(n)?null:n;
+    });
+    // Only include rows with at least some valid data
+    if(vals.some(v=>v!==null&&v>0))result[url]=vals;
+  }
+  if(key==='imp')impData=result;
+  else if(key==='clicks')clicksData=result;
+  else if(key==='ctr')ctrData=result;
+  else posData=result;
+}
+
+function buildBlogStats(){
+  // Union all URLs across all tabs
+  const allUrls=new Set([...Object.keys(impData),...Object.keys(clicksData),...Object.keys(ctrData),...Object.keys(posData)]);
+  blogs=[...allUrls];
+  const half=Math.floor(dates.length/2);
+
+  allBlogStats=blogs.map(url=>{
+    const imp=impData[url]||[];
+    const clicks=clicksData[url]||[];
+    const ctr=ctrData[url]||[];
+    const pos=posData[url]||[];
+    const totalImp=sum(imp);
+    const totalClicks=sum(clicks);
+    const validCtr=ctr.filter(v=>v!==null&&v>0);
+    const avgCtr=validCtr.length?validCtr.reduce((a,b)=>a+b,0)/validCtr.length:null;
+    const validPos=pos.filter(v=>v!==null&&v>0);
+    const avgPos=validPos.length?validPos.reduce((a,b)=>a+b,0)/validPos.length:null;
+    // Trend: first half vs second half impressions
+    const first=sum(imp.slice(0,half));
+    const last=sum(imp.slice(half));
+    const trendDelta=last-first;
+    const trendPct=first>0?(last-first)/first:null;
+    // Position trend
+    const firstPos=avg(pos.slice(0,half));
+    const lastPos=avg(pos.slice(half));
+    const posDelta=firstPos&&lastPos?lastPos-firstPos:null;
+    // Slug for display
+    const slug=url.replace('https://www.keepersecurity.com/blog/','').replace(/^\d{4}\/\d{2}\/\d{2}\//,'').replace(/\/$/,'');
+    return{url,slug,totalImp,totalClicks,avgCtr,avgPos,trendDelta,trendPct,posDelta,imp,clicks,ctr,pos};
+  }).filter(b=>b.totalImp>0||b.totalClicks>0);
+
+  filteredBlogs=[...allBlogStats];
+}
+
+const sum=arr=>arr.reduce((s,v)=>s+(v||0),0);
+const avg=arr=>{const v=arr.filter(x=>x!==null&&x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  if(activeTab==='overview')renderOverview();
+  else if(activeTab==='blogs')renderBlogs();
+  else renderTrends();
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
+function renderOverview(){
+  const totalImp=allBlogStats.reduce((s,b)=>s+b.totalImp,0);
+  const totalClicks=allBlogStats.reduce((s,b)=>s+b.totalClicks,0);
+  const ctrBlogs=allBlogStats.filter(b=>b.avgCtr!==null);
+  const avgCtr=ctrBlogs.length?ctrBlogs.reduce((s,b)=>s+b.avgCtr,0)/ctrBlogs.length:0;
+  const posBlogs=allBlogStats.filter(b=>b.avgPos!==null);
+  const avgPos=posBlogs.length?posBlogs.reduce((s,b)=>s+b.avgPos,0)/posBlogs.length:0;
+
+  st('m-imp',fmtN(totalImp));st('m-imp-sub',allBlogStats.length.toLocaleString()+' blog posts tracked');
+  st('m-clicks',fmtN(totalClicks));st('m-clicks-sub','avg '+fmtN(Math.round(totalClicks/dates.length))+'/day');
+  st('m-ctr',(avgCtr*100).toFixed(2)+'%');st('m-ctr-sub','across '+ctrBlogs.length+' posts with CTR data');
+  st('m-pos',avgPos.toFixed(1));st('m-pos-sub','lower is better');
+
+  // Daily totals
+  const dailyImp=dates.map((_,i)=>allBlogStats.reduce((s,b)=>s+(b.imp[i]||0),0));
+  const dailyClicks=dates.map((_,i)=>allBlogStats.reduce((s,b)=>s+(b.clicks[i]||0),0));
+  const dayLabels=dates.map(d=>{
+    const parts=String(d).split('/');
+    if(parts.length>=2)return parts[1]+'/'+parts[2];
+    const dt=new Date(d);return isNaN(dt)?d:(dt.getMonth()+1)+'/'+(dt.getDate());
+  });
+
+  dc('ch-daily');
+  charts['ch-daily']=new Chart(document.getElementById('ch-daily').getContext('2d'),{
+    type:'line',
+    data:{labels:dayLabels,datasets:[
+      {label:'Impressions',data:dailyImp,borderColor:'#ffc700',backgroundColor:'rgba(255,199,0,.08)',fill:true,tension:.3,pointRadius:1,yAxisID:'y'},
+      {label:'Clicks',data:dailyClicks,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.08)',fill:true,tension:.3,pointRadius:1,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtN(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#ccc',maxTicksLimit:10}},y:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)},position:'left'},y2:{grid:{display:false},ticks:{font:{size:10},color:'#378ADD',callback:v=>fmtS(v)},position:'right'}}}
+  });
+
+  // Top 10 by impressions
+  const top10=allBlogStats.sort((a,b)=>b.totalImp-a.totalImp).slice(0,10);
+  dc('ch-top10');
+  charts['ch-top10']=new Chart(document.getElementById('ch-top10').getContext('2d'),{
+    type:'bar',
+    data:{labels:top10.map(b=>b.slug.length>35?b.slug.slice(0,33)+'...':b.slug),datasets:[{data:top10.map(b=>b.totalImp),backgroundColor:'rgba(255,199,0,.2)',borderColor:'#ffc700',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmtN(c.raw)+' impressions'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Top 10 by clicks
+  const top10c=allBlogStats.sort((a,b)=>b.totalClicks-a.totalClicks).slice(0,10);
+  dc('ch-top-clicks');
+  charts['ch-top-clicks']=new Chart(document.getElementById('ch-top-clicks').getContext('2d'),{
+    type:'bar',
+    data:{labels:top10c.map(b=>b.slug.length>35?b.slug.slice(0,33)+'...':b.slug),datasets:[{data:top10c.map(b=>b.totalClicks),backgroundColor:'rgba(55,138,221,.2)',borderColor:'#378ADD',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmtN(c.raw)+' clicks'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Position distribution
+  const buckets={'1-3':0,'4-10':0,'11-20':0,'21-50':0,'50+':0};
+  allBlogStats.filter(b=>b.avgPos).forEach(b=>{
+    if(b.avgPos<=3)buckets['1-3']++;
+    else if(b.avgPos<=10)buckets['4-10']++;
+    else if(b.avgPos<=20)buckets['11-20']++;
+    else if(b.avgPos<=50)buckets['21-50']++;
+    else buckets['50+']++;
+  });
+  dc('ch-pos-dist');
+  charts['ch-pos-dist']=new Chart(document.getElementById('ch-pos-dist').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:Object.keys(buckets),datasets:[{data:Object.values(buckets),backgroundColor:['#1D9E75','#ffc700','#378ADD','#7F77DD','#E8820A'],borderColor:'#111',borderWidth:2,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#fff',padding:8,boxWidth:10}},tooltip:{callbacks:{label:c=>' Position '+c.label+': '+c.raw+' blogs'}}}}
+  });
+}
+
+// ── BLOG DETAIL ───────────────────────────────────────────────────────────────
+function renderBlogs(){
+  const search=document.getElementById('blog-search').value.toLowerCase().trim();
+  const sorted=[...allBlogStats].filter(b=>!search||b.url.toLowerCase().includes(search)||b.slug.toLowerCase().includes(search));
+  filteredBlogs=sorted.sort((a,b)=>{
+    const av=a[bSortCol]||0,bv=b[bSortCol]||0;
+    return(av-bv)*bSortDir;
+  });
+
+  st('blog-search-count',filteredBlogs.length.toLocaleString()+' posts');
+  st('blogs-cnt',filteredBlogs.length.toLocaleString()+' posts');
+
+  const tot=filteredBlogs.length,pages=Math.ceil(tot/PER),start=(bPg-1)*PER,sl=filteredBlogs.slice(start,start+PER);
+  document.getElementById('blogs-tbody').innerHTML=sl.map(b=>{
+    const trendClass=b.trendDelta>0?'trend-up':b.trendDelta<0?'trend-down':'trend-flat';
+    const trendStr=b.trendDelta>0?'+'+fmtN(b.trendDelta):fmtN(b.trendDelta);
+    const trendPctStr=b.trendPct!==null?(b.trendPct>=0?'+':'')+(b.trendPct*100).toFixed(0)+'%':'–';
+    return `<tr data-url="${esc(b.url)}">
+      <td class="td-url"><a href="${esc(b.url)}" target="_blank" onclick="event.stopPropagation()">${esc(b.slug)}</a></td>
+      <td class="td-r">${fmtN(b.totalImp)}</td>
+      <td class="td-r">${fmtN(b.totalClicks)}</td>
+      <td class="td-r">${b.avgCtr!==null?(b.avgCtr*100).toFixed(2)+'%':'–'}</td>
+      <td class="td-r">${b.avgPos!==null?b.avgPos.toFixed(1):'–'}</td>
+      <td class="td-r"><span class="${trendClass}">${trendStr}</span> <span style="font-size:11px;color:var(--gray3)">${trendPctStr}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Row click -> show detail
+  document.querySelectorAll('#blogs-tbody tr').forEach(tr=>{
+    tr.addEventListener('click',()=>showDetail(tr.dataset.url));
+  });
+
+  st('b-pag-info',(start+1)+'\u2013'+Math.min(start+PER,tot)+' of '+tot.toLocaleString());
+  buildPagination('b-pag-btns',bPg,pages,p=>{bPg=p;renderBlogs();});
+  document.querySelectorAll('#section-blogs thead th[data-col]').forEach(th=>th.classList.toggle('sorted',th.dataset.col===bSortCol));
+}
+
+function showDetail(url){
+  const b=allBlogStats.find(x=>x.url===url);if(!b)return;
+  document.getElementById('detail-panel').classList.add('show');
+  document.getElementById('detail-url').innerHTML='<a href="'+esc(url)+'" target="_blank">'+esc(url)+'</a>';
+  st('d-imp',fmtN(b.totalImp));
+  st('d-clicks',fmtN(b.totalClicks));
+  st('d-ctr',b.avgCtr!==null?(b.avgCtr*100).toFixed(2)+'%':'–');
+  st('d-pos',b.avgPos!==null?b.avgPos.toFixed(1):'–');
+
+  const dayLabels=dates.map(d=>{const dt=new Date(d);return isNaN(dt)?d:(dt.getMonth()+1)+'/'+(dt.getDate());});
+  dc('ch-detail');
+  charts['ch-detail']=new Chart(document.getElementById('ch-detail').getContext('2d'),{
+    type:'line',
+    data:{labels:dayLabels,datasets:[
+      {label:'Impressions',data:b.imp,borderColor:'#ffc700',tension:.3,pointRadius:2,yAxisID:'y'},
+      {label:'Clicks',data:b.clicks,borderColor:'#378ADD',tension:.3,pointRadius:2,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{font:{size:11},color:'#fff',boxWidth:10}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtN(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#ccc',maxTicksLimit:15}},y:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ffc700',callback:v=>fmtS(v)}},y2:{grid:{display:false},ticks:{font:{size:10},color:'#378ADD',callback:v=>fmtS(v)},position:'right'}}}
+  });
+  document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── TRENDS ────────────────────────────────────────────────────────────────────
+function renderTrends(){
+  const half=Math.floor(dates.length/2);
+  const withTrend=allBlogStats.filter(b=>b.totalImp>100);
+
+  // Gainers
+  const gainers=withTrend.filter(b=>b.trendDelta>0).sort((a,b)=>b.trendDelta-a.trendDelta).slice(0,10);
+  dc('ch-gainers');
+  charts['ch-gainers']=new Chart(document.getElementById('ch-gainers').getContext('2d'),{
+    type:'bar',
+    data:{labels:gainers.map(b=>b.slug.length>30?b.slug.slice(0,28)+'...':b.slug),datasets:[{data:gainers.map(b=>b.trendDelta),backgroundColor:'rgba(29,158,117,.25)',borderColor:'#1D9E75',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' +'+fmtN(c.raw)+' impressions'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Losers
+  const losers=withTrend.filter(b=>b.trendDelta<0).sort((a,b)=>a.trendDelta-b.trendDelta).slice(0,10);
+  dc('ch-losers');
+  charts['ch-losers']=new Chart(document.getElementById('ch-losers').getContext('2d'),{
+    type:'bar',
+    data:{labels:losers.map(b=>b.slug.length>30?b.slug.slice(0,28)+'...':b.slug),datasets:[{data:losers.map(b=>Math.abs(b.trendDelta)),backgroundColor:'rgba(226,75,74,.2)',borderColor:'#E24B4A',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' -'+fmtN(c.raw)+' impressions'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc',callback:v=>fmtS(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Position improvers (negative delta = moved up = better)
+  const posImprovers=allBlogStats.filter(b=>b.posDelta!==null&&b.posDelta<-0.5&&b.avgPos<50).sort((a,b)=>a.posDelta-b.posDelta).slice(0,10);
+  dc('ch-pos-up');
+  charts['ch-pos-up']=new Chart(document.getElementById('ch-pos-up').getContext('2d'),{
+    type:'bar',
+    data:{labels:posImprovers.map(b=>b.slug.length>30?b.slug.slice(0,28)+'...':b.slug),datasets:[{data:posImprovers.map(b=>Math.abs(b.posDelta)),backgroundColor:'rgba(29,158,117,.25)',borderColor:'#1D9E75',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' +'+c.raw.toFixed(1)+' positions gained'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Position decliners (positive delta = dropped)
+  const posDecliners=allBlogStats.filter(b=>b.posDelta!==null&&b.posDelta>0.5&&b.avgPos<50).sort((a,b)=>b.posDelta-a.posDelta).slice(0,10);
+  dc('ch-pos-down');
+  charts['ch-pos-down']=new Chart(document.getElementById('ch-pos-down').getContext('2d'),{
+    type:'bar',
+    data:{labels:posDecliners.map(b=>b.slug.length>30?b.slug.slice(0,28)+'...':b.slug),datasets:[{data:posDecliners.map(b=>b.posDelta),backgroundColor:'rgba(226,75,74,.2)',borderColor:'#E24B4A',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' -'+c.raw.toFixed(1)+' positions lost'}}},scales:{x:{grid:{color:'#222'},ticks:{font:{size:10},color:'#ccc'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#ccc'}}}}
+  });
+
+  // Movers table — all significant movers sorted by abs change
+  const allMovers=withTrend.filter(b=>Math.abs(b.trendDelta)>100)
+    .sort((a,b)=>Math.abs(b.trendDelta)-Math.abs(a.trendDelta)).slice(0,50);
+  const first15=half,last15=dates.length-half;
+  document.getElementById('movers-tbody').innerHTML=allMovers.map(b=>{
+    const f=sum(b.imp.slice(0,half));
+    const l=sum(b.imp.slice(half));
+    const isUp=l>f;
+    const pct=f>0?((l-f)/f*100).toFixed(1)+'%':'–';
+    return `<tr>
+      <td class="td-url"><a href="${esc(b.url)}" target="_blank">${esc(b.slug)}</a></td>
+      <td class="td-r">${fmtN(f)}</td>
+      <td class="td-r">${fmtN(l)}</td>
+      <td class="td-r"><span class="mover-badge ${isUp?'mb-up':'mb-down'}">${isUp?'+':''}${fmtN(l-f)}</span></td>
+      <td class="td-r" style="color:${isUp?'var(--teal)':'var(--danger)'}">${isUp?'+':''}${pct}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function buildPagination(id,pg,pages,onClick){
+  const pb=document.getElementById(id);pb.innerHTML='';
+  const mkB=(lbl,en,fn,act=false)=>{const b=document.createElement('button');b.className='pbt'+(act?' active':'');b.textContent=lbl;b.disabled=!en;if(en)b.addEventListener('click',fn);return b;};
+  pb.appendChild(mkB('\u2190',pg>1,()=>onClick(pg-1)));
+  pgr(pg,pages).forEach(p=>{if(p==='...'){const e=document.createElement('span');e.textContent='...';e.style.cssText='padding:0 4px;color:#666;font-size:12px;align-self:center';pb.appendChild(e);}else pb.appendChild(mkB(p,true,()=>onClick(p),p===pg));});
+  pb.appendChild(mkB('\u2192',pg<pages,()=>onClick(pg+1)));
+}
+const fmtN=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'k':Math.round(n).toLocaleString();
+const fmtS=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'k':n;
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+const dc=id=>{if(charts[id]){charts[id].destroy();delete charts[id];}};
+const showLoad=v=>document.getElementById('loading').classList.toggle('show',v);
+const showErr=msg=>{const b=document.getElementById('error-bar');b.textContent=msg;b.classList.add('show');};
+const hideErr=()=>document.getElementById('error-bar').classList.remove('show');
+const pgr=(cur,tot)=>{if(tot<=7)return Array.from({length:tot},(_,i)=>i+1);if(cur<=4)return[1,2,3,4,5,'...',tot];if(cur>=tot-3)return[1,'...',tot-4,tot-3,tot-2,tot-1,tot];return[1,'...',cur-1,cur,cur+1,'...',tot];};
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeTab=btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('section-'+activeTab).classList.add('active');
+    document.getElementById('blog-search-bar').style.display=activeTab==='blogs'?'flex':'none';
+    render();
+  });
+});
+document.getElementById('blog-search').addEventListener('input',()=>{bPg=1;renderBlogs();});
+document.getElementById('close-detail').addEventListener('click',()=>{document.getElementById('detail-panel').classList.remove('show');dc('ch-detail');});
+document.querySelectorAll('#section-blogs thead th[data-col]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    if(bSortCol===th.dataset.col)bSortDir*=-1;else{bSortCol=th.dataset.col;bSortDir=-1;}
+    bPg=1;renderBlogs();
+  });
+});
+document.getElementById('refresh-btn').addEventListener('click',()=>{const b=document.getElementById('refresh-btn');b.classList.add('spinning');fetchAll().finally(()=>b.classList.remove('spinning'));});
+document.getElementById('signout-btn').addEventListener('click',()=>{if(token)google.accounts.oauth2.revoke(token,()=>{});token=null;sessionStorage.removeItem('gtoken');document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';});
+
+loadGIS();
+</script>
+</body>
+</html>
